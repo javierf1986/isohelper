@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./isohelper.db"  # Default to SQLite for development
     
+    # Security & Authentication (Phase 3)
+    SECRET_KEY: str = "your-secret-key-change-in-production"  # Change in .env!
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes for access tokens
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days for refresh tokens
+    
     # Document Storage
     DOCUMENTS_PATH: str = "./generated_documents"
     TEMPLATES_PATH: str = "./templates/iso9001"

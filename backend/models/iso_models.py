@@ -235,6 +235,9 @@ class Workspace(Base):
     contact_phone = Column(String(50))
     admin_user_id = Column(String(50))
     
+    # Owner (Phase 3: Link to authenticated users)
+    owner_id = Column(String(50), ForeignKey('users.id'), nullable=True, index=True)
+    
     # Timestamps
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -243,6 +246,7 @@ class Workspace(Base):
     # Relationships
     standards = relationship("ISOStandard", secondary=workspace_standards, back_populates="workspaces")
     documents = relationship("GeneratedDocument", back_populates="workspace")
+    owner = relationship("User", back_populates="workspaces")
     
     def __repr__(self):
         return f"<Workspace {self.client_name}>"

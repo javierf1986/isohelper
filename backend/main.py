@@ -11,7 +11,8 @@ from pathlib import Path
 # Add parent directory to path to import config
 sys.path.append(str(Path(__file__).parent.parent))
 
-from backend.api.routes import documents, templates, compliance, workspaces
+from backend.api.routes import documents, templates, compliance, workspaces, auth
+from backend.database.database import init_db
 from config.settings import settings
 
 @asynccontextmanager
@@ -20,14 +21,17 @@ async def lifespan(app: FastAPI):
     # Startup
     print("🚀 Starting ISO 9001 AI Documentation Generator")
     print(f"📝 Environment: {settings.ENVIRONMENT}")
+    print("🗄️  Initializing database...")
+    init_db()
+    print("✅ Database initialized")
     yield
     # Shutdown
     print("🛑 Shutting down application")
 
 app = FastAPI(
-    title="ISO 9001 AI Documentation Generator",
-    description="Autonomous generation and management of ISO 9001 certification documentation",
-    version="0.1.0",
+    title="ISO Helper - Universal Multi-ISO Platform",
+    description="Enterprise platform for multi-ISO standard management with AI-powered document generation and workspace collaboration",
+    version="3.0.0",
     lifespan=lifespan
 )
 
@@ -41,6 +45,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 app.include_router(templates.router, prefix="/api/v1/templates", tags=["Templates"])
 app.include_router(compliance.router, prefix="/api/v1/compliance", tags=["Compliance"])
@@ -50,8 +55,16 @@ app.include_router(workspaces.router, tags=["Workspaces"])
 async def root():
     """Root endpoint - API status"""
     return {
-        "message": "ISO 9001 AI Documentation Generator API",
-        "version": "0.1.0",
+        "message": "ISO Helper - Universal Multi-ISO Platform",
+        "version": "3.0.0",
+        "phase": "Phase 3: Enterprise & Security",
+        "features": [
+            "Multi-ISO standard support (9001, 14001, 27001, 45001, etc.)",
+            "JWT authentication and RBAC",
+            "Multi-tenant workspaces",
+            "AI-powered document generation",
+            "78 clauses across 2 ISO standards"
+        ],
         "status": "operational",
         "docs": "/docs"
     }
