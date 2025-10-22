@@ -11,7 +11,7 @@ from pathlib import Path
 # Add parent directory to path to import config
 sys.path.append(str(Path(__file__).parent.parent))
 
-from api.routes import documents, templates, compliance
+from backend.api.routes import documents, templates, compliance
 from config.settings import settings
 
 @asynccontextmanager
