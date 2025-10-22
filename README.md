@@ -164,8 +164,18 @@ curl "http://localhost:8000/health"
 
 ## 🧪 Testing
 
+### Run Document Generator Tests
 ```bash
-cd backend
+python tests/test_manual.py
+```
+
+### Run API Tests (requires server running)
+```bash
+python tests/test_api_quick.py
+```
+
+### Run All Tests with Pytest
+```bash
 pytest tests/
 ```
 

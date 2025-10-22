@@ -5,8 +5,8 @@ Run this while the server is running in another terminal
 from pathlib import Path
 import sys
 
-# Setup paths
-project_root = Path(__file__).parent
+# Setup paths - now in tests/ folder, so parent is project root
+project_root = Path(__file__).parent.parent
 backend_path = project_root / "backend"
 sys.path.insert(0, str(backend_path))
 sys.path.insert(0, str(project_root))

@@ -23,12 +23,12 @@
    - Prevents validation errors from extra .env fields
 
 ### ✅ Created Test Suite
-1. **test_manual.py** - Standalone document generator test
+1. **tests/test_manual.py** - Standalone document generator test
    - Tests single document generation
    - Tests full manual generation
    - Validates output files
 
-2. **test_api_quick.py** - API endpoint tests
+2. **tests/test_api_quick.py** - API endpoint tests
    - Tests health check
    - Tests root endpoint
    - Tests document generation endpoint
@@ -174,7 +174,7 @@ python main.py
 
 ### 2. Test Document Generation
 ```bash
-python test_manual.py
+python tests/test_manual.py
 ```
 
 ### 3. Access API Documentation

@@ -106,7 +106,7 @@ Invoke-RestMethod -Uri "http://localhost:8000/api/v1/documents/generate" -Method
 
 Run the included test script:
 ```bash
-python test_manual.py
+python tests/test_manual.py
 ```
 
 This will:
