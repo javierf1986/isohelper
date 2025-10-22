@@ -127,7 +127,7 @@ def import_iso_to_database(
     
     # Step 2: Check if standard already exists
     existing = session.query(ISOStandard).filter_by(
-        number=metadata.standard_number,
+        iso_number=metadata.standard_number,
         year=metadata.year
     ).first()
     
@@ -137,25 +137,30 @@ def import_iso_to_database(
         return existing
     
     if existing and overwrite:
-        logger.info(f"Removing existing standard {existing.number}:{existing.year}")
+        logger.info(f"Removing existing standard {existing.iso_number}:{existing.year}")
         session.delete(existing)
         session.commit()
     
     # Step 3: Create ISO Standard record
+    # Generate unique ID
+    import uuid
+    standard_id = str(uuid.uuid4())
+    
     standard = ISOStandard(
-        number=metadata.standard_number,
+        id=standard_id,
+        iso_number=metadata.standard_number,
         year=metadata.year,
-        title=metadata.title,
+        name=f"{metadata.standard_number}:{metadata.year}",
+        full_title=metadata.title,
         category=map_category(metadata.category),
         description=f"{metadata.title} - Imported from {file_path.name} on {datetime.now().strftime('%Y-%m-%d')}",
-        version=metadata.year,
         is_active=True
     )
     
     session.add(standard)
     session.flush()  # Get the ID
     
-    logger.info(f"Created standard: {standard.number}:{standard.year} (ID: {standard.id})")
+    logger.info(f"Created standard: {standard.iso_number}:{standard.year} (ID: {standard.id})")
     
     # Step 4: Create clause records with hierarchy
     clause_map = {}  # Map clause numbers to database IDs
@@ -167,15 +172,16 @@ def import_iso_to_database(
             parent_id = clause_map.get(clause.parent_number)
         
         db_clause = ISOClause(
+            id=str(uuid.uuid4()),
             standard_id=standard.id,
-            number=clause.clause_number,
+            clause_number=clause.clause_number,
             title=clause.title,
             content=clause.content,
             level=clause.level,
-            parent_id=parent_id,
-            clause_type=map_clause_type(clause.clause_type),
-            is_requirement=clause.is_requirement,
-            order_index=len(clause_map)
+            parent_clause_id=parent_id,
+            clause_type=map_clause_type(clause.clause_type).value,
+            is_mandatory=clause.is_requirement,
+            sequence=len(clause_map)
         )
         
         session.add(db_clause)
@@ -235,7 +241,7 @@ def import_iso_to_database(
     # Step 6: Commit all changes
     session.commit()
     
-    logger.info(f"✅ Successfully imported {standard.number}:{standard.year}")
+    logger.info(f"✅ Successfully imported {standard.iso_number}:{standard.year}")
     logger.info(f"   Clauses: {len(clause_map)}")
     logger.info(f"   Requirements: {statistics['requirements']}")
     logger.info(f"   Guidance: {statistics['guidance']}")
@@ -287,7 +293,7 @@ def verify_import(session: Session, standard_number: str, year: str):
     
     # Find standard
     standard = session.query(ISOStandard).filter_by(
-        number=standard_number,
+        iso_number=standard_number,
         year=year
     ).first()
     
@@ -295,7 +301,7 @@ def verify_import(session: Session, standard_number: str, year: str):
         logger.error("❌ Standard not found in database!")
         return False
     
-    logger.info(f"✓ Standard found: {standard.title}")
+    logger.info(f"✓ Standard found: {standard.full_title}")
     
     # Count clauses
     clause_count = session.query(ISOClause).filter_by(
@@ -373,9 +379,9 @@ def main():
         logger.error(f"File not found: {file_path}")
         return 1
     
-    if file_path.suffix.lower() not in ['.pdf', '.docx', '.doc']:
+    if file_path.suffix.lower() not in ['.pdf', '.docx', '.doc', '.txt']:
         logger.error(f"Unsupported file format: {file_path.suffix}")
-        logger.info("Supported formats: .pdf, .docx, .doc")
+        logger.info("Supported formats: .pdf, .docx, .doc, .txt")
         return 1
     
     # Import to database
@@ -394,12 +400,12 @@ def main():
         )
         
         # Verify import
-        verify_import(session, standard.number, str(standard.year))
+        verify_import(session, standard.iso_number, str(standard.year))
         
         logger.info("\n" + "=" * 70)
         logger.info("Import complete!")
         logger.info("=" * 70)
-        logger.info(f"\nStandard: {standard.number}:{standard.year}")
+        logger.info(f"\nStandard: {standard.iso_number}:{standard.year}")
         logger.info(f"Title: {standard.title}")
         logger.info(f"Category: {standard.category.value}")
         logger.info(f"\nNext steps:")

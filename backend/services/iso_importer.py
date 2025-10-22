@@ -134,6 +134,29 @@ class ISOTextExtractor:
             logger.error(f"Error extracting DOCX: {e}")
             raise
     
+    def extract_from_txt(self, file_path: Path) -> Tuple[str, int]:
+        """
+        Extract text from TXT file (for testing)
+        
+        Args:
+            file_path: Path to TXT file
+            
+        Returns:
+            Tuple of (extracted_text, line_count)
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+            
+            line_count = len([line for line in text.split('\n') if line.strip()])
+            logger.info(f"Successfully loaded {len(text)} characters from {file_path.name}")
+            
+            return text, line_count
+            
+        except Exception as e:
+            logger.error(f"Error reading TXT file: {e}")
+            raise
+    
     def clean_text(self, text: str) -> str:
         """
         Clean and normalize extracted text while preserving structure
@@ -376,8 +399,10 @@ class UniversalISOImporter:
             raw_text, page_count = self.text_extractor.extract_from_pdf(file_path)
         elif suffix in ['.docx', '.doc']:
             raw_text, page_count = self.text_extractor.extract_from_docx(file_path)
+        elif suffix == '.txt':
+            raw_text, page_count = self.text_extractor.extract_from_txt(file_path)
         else:
-            raise ValueError(f"Unsupported file format: {suffix}")
+            raise ValueError(f"Unsupported file format: {suffix}. Supported: .pdf, .docx, .doc, .txt")
         
         # Clean text
         clean_text = self.text_extractor.clean_text(raw_text)
