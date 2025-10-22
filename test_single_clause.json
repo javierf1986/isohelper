@@ -1,9 +1,0 @@
-{
-  "company_name": "Manufacturing Plus Ltd",
-  "industry": "automotive manufacturing",
-  "company_size": "large",
-  "clauses": ["10.2"],
-  "format": "markdown",
-  "generate_full_manual": false,
-  "custom_context": "We manufacture automotive components with ISO/TS 16949 certification."
-}

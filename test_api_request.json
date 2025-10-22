@@ -1,9 +1,0 @@
-{
-  "company_name": "TechCorp Industries",
-  "industry": "software development",
-  "company_size": "medium",
-  "clauses": ["4.1", "4.2", "5.1", "6.1", "7.1", "8.1", "9.1", "10.2"],
-  "format": "markdown",
-  "generate_full_manual": true,
-  "custom_context": "We focus on cloud-based SaaS applications with a distributed team."
-}

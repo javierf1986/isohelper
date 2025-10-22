@@ -11,7 +11,7 @@ from pathlib import Path
 # Add parent directory to path to import config
 sys.path.append(str(Path(__file__).parent.parent))
 
-from backend.api.routes import documents, templates, compliance
+from backend.api.routes import documents, templates, compliance, workspaces
 from config.settings import settings
 
 @asynccontextmanager
@@ -44,6 +44,7 @@ app.add_middleware(
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 app.include_router(templates.router, prefix="/api/v1/templates", tags=["Templates"])
 app.include_router(compliance.router, prefix="/api/v1/compliance", tags=["Compliance"])
+app.include_router(workspaces.router, tags=["Workspaces"])
 
 @app.get("/")
 async def root():
