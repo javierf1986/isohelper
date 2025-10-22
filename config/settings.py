@@ -16,14 +16,15 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
     
-    # AI Configuration
-    AI_PROVIDER: str = "mistral"  # mistral, openai, or local
-    MISTRAL_API_KEY: str = ""
-    OPENAI_API_KEY: str = ""
+    # AI Configuration - Local LLM (Ollama with CUDA)
+    AI_PROVIDER: str = "local"  # local = Ollama (no API keys needed)
+    MISTRAL_API_KEY: str = ""  # Not used with local provider
+    OPENAI_API_KEY: str = ""  # Not used with local provider
     LOCAL_LLM_URL: str = "http://localhost:11434/v1"  # Ollama default
-    AI_MODEL: str = "mistral-medium"
+    LOCAL_LLM_MODEL: str = "tinyllama"  # TinyLlama 1.1B (~4GB VRAM, leaves 4GB free for OS)
+    AI_MODEL: str = "tinyllama"  # Model name for display/logging
     AI_TEMPERATURE: float = 0.7
-    MAX_TOKENS: int = 2000
+    MAX_TOKENS: int = 800  # Conservative for fast response
     ENABLE_AI_ENHANCEMENT: bool = True  # Toggle AI features on/off
     
     # Database
