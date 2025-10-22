@@ -198,9 +198,9 @@ class AIEnhancer:
             self.provider = OpenAIProvider(api_key)
         
         elif provider == "local":
-            if not local_url:
-                local_url = getattr(settings, "LOCAL_LLM_URL", "http://localhost:11434/v1")
-            self.provider = LocalLLMProvider(local_url)
+            local_url = local_url or getattr(settings, "LOCAL_LLM_URL", "http://localhost:11434/v1")
+            model_name = getattr(settings, "LOCAL_LLM_MODEL", "mistral")
+            self.provider = LocalLLMProvider(local_url, model_name)  # type: ignore
         
         else:
             raise ValueError(f"Unsupported provider: {provider}")

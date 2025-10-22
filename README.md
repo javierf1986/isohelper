@@ -56,7 +56,7 @@ Transform compliance documentation from a burden into an intelligent, automated 
 **Phase 3: Enterprise Features** (6-9 months)
 - White-label capabilities for consultants
 - Gap analysis and compliance intelligence
-- Multi-language support (ES, FR, DE, PT)
+- Multi-language support (EN, ES, FR, DE, PT)
 - Advanced reporting and analytics
 - ERP/DMS integrations
 
