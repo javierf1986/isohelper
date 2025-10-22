@@ -33,6 +33,7 @@ from backend.services.iso_importer import (
     UniversalISOImporter,
     ClauseType as ImporterClauseType
 )
+from backend.services.ai_parser import AIISOParser
 import logging
 
 logging.basicConfig(
@@ -71,6 +72,7 @@ def import_iso_to_database(
     file_path: Path,
     session: Session,
     generate_templates: bool = False,
+    use_ai: bool = True,
     overwrite: bool = False
 ) -> ISOStandard:
     """
@@ -80,6 +82,7 @@ def import_iso_to_database(
         file_path: Path to ISO PDF/DOCX file
         session: SQLAlchemy session
         generate_templates: Whether to auto-generate Jinja2 templates
+        use_ai: Whether to use AI for enhanced parsing
         overwrite: Whether to overwrite existing standard
         
     Returns:
@@ -90,6 +93,28 @@ def import_iso_to_database(
     # Step 1: Extract text and structure using importer
     importer = UniversalISOImporter()
     result = importer.import_from_file(file_path)
+    
+    # Step 2: Enhance with AI if requested
+    ai_parser = None
+    if use_ai:
+        try:
+            logger.info("Using AI to enhance extraction...")
+            ai_parser = AIISOParser()
+            
+            # Enhance metadata
+            result['metadata'] = ai_parser.enhance_metadata_extraction(
+                result['clean_text'],
+                result['metadata']
+            )
+            
+            # Enhance clause classification
+            result['clauses'] = ai_parser.enhance_clause_detection(
+                result['clean_text'],
+                result['clauses']
+            )
+        except Exception as e:
+            logger.warning(f"AI enhancement failed: {e}. Continuing with regex-based extraction.")
+            ai_parser = None
     
     metadata = result['metadata']
     clauses = result['clauses']
@@ -167,22 +192,43 @@ def import_iso_to_database(
         requirement_clauses = [c for c in clauses if c.is_requirement]
         template_count = 0
         
-        for clause in requirement_clauses:
-            # Generate a basic template from the clause content
-            template_content = generate_template_from_clause(clause)
+        # Use AI templates if requested and AI parser is available
+        if use_ai and ai_parser:
+            logger.info("Generating AI-powered templates...")
+            ai_templates = ai_parser.generate_smart_templates(requirement_clauses)
             
-            template = StandardTemplate(
-                standard_id=standard.id,
-                clause_number=clause.clause_number,
-                template_name=f"{clause.clause_number} - {clause.title}",
-                template_content=template_content,
-                variables=['company_name', 'industry'],  # Basic variables
-                description=f"Auto-generated template for {clause.clause_number}",
-                is_active=True
-            )
-            
-            session.add(template)
-            template_count += 1
+            for clause_number, template_content in ai_templates.items():
+                # Find clause title
+                clause_title = next((c.title for c in requirement_clauses if c.clause_number == clause_number), "")
+                
+                template = StandardTemplate(
+                    standard_id=standard.id,
+                    clause_number=clause_number,
+                    template_name=f"{clause_number} - {clause_title}",
+                    template_content=template_content,
+                    variables=['company_name', 'industry'],  # Extract from template
+                    description=f"AI-generated template for {clause_number}",
+                    is_active=True
+                )
+                session.add(template)
+                template_count += 1
+        else:
+            # Use basic templates
+            for clause in requirement_clauses:
+                template_content = generate_template_from_clause(clause)
+                
+                template = StandardTemplate(
+                    standard_id=standard.id,
+                    clause_number=clause.clause_number,
+                    template_name=f"{clause.clause_number} - {clause.title}",
+                    template_content=template_content,
+                    variables=['company_name', 'industry'],  # Basic variables
+                    description=f"Auto-generated template for {clause.clause_number}",
+                    is_active=True
+                )
+                
+                session.add(template)
+                template_count += 1
         
         logger.info(f"Generated {template_count} templates")
     
@@ -293,6 +339,17 @@ def main():
         help='Auto-generate basic templates for requirement clauses'
     )
     parser.add_argument(
+        '--use-ai',
+        action='store_true',
+        default=True,
+        help='Use AI for enhanced parsing and template generation (default: True)'
+    )
+    parser.add_argument(
+        '--no-ai',
+        action='store_true',
+        help='Disable AI enhancement, use only regex-based parsing'
+    )
+    parser.add_argument(
         '--overwrite',
         action='store_true',
         help='Overwrite existing standard if it exists'
@@ -325,10 +382,14 @@ def main():
     try:
         session = get_session()
         
+        # Determine AI usage
+        use_ai = args.use_ai and not args.no_ai
+        
         standard = import_iso_to_database(
             file_path=file_path,
             session=session,
             generate_templates=args.generate_templates,
+            use_ai=use_ai,
             overwrite=args.overwrite
         )
         
