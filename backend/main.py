@@ -5,6 +5,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
+import sys
+from pathlib import Path
+
+# Add parent directory to path to import config
+sys.path.append(str(Path(__file__).parent.parent))
 
 from api.routes import documents, templates, compliance
 from config.settings import settings
