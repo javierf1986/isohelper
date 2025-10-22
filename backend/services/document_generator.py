@@ -9,6 +9,7 @@ import logging
 from jinja2 import Template
 
 from config.settings import settings
+from templates.iso9001 import ISO_CLAUSES
 
 class DocumentGenerator:
     """
@@ -100,20 +101,13 @@ class DocumentGenerator:
     
     def _load_template(self, clause: str) -> Optional[str]:
         """Load template file for given clause"""
-        # Map clause to template file
-        template_mapping = {
-            "4.1": "clause_4_1_context.md",
-            "4.2": "clause_4_2_interested_parties.md",
-            "5.1": "clause_5_1_leadership.md",
-            "6.1": "clause_6_1_risks_opportunities.md",
-            "8.1": "clause_8_1_operational_planning.md"
-        }
-        
-        template_file = template_mapping.get(clause)
-        if not template_file:
+        # Get template from ISO_CLAUSES metadata
+        if clause not in ISO_CLAUSES:
             return None
         
+        template_file = ISO_CLAUSES[clause]["template"]
         template_path = self.templates_path / template_file
+        
         if not template_path.exists():
             return None
         

@@ -156,27 +156,31 @@ To ensure that production and service provision are carried out under controlled
 - Customer and delivery information
 
 **Traceability for {{industry}} Industry:**
-{{#if industry == "Medical Devices"}}
+{% if industry == "Medical Devices" %}
 - UDI (Unique Device Identification)
 - Device master record linkage
 - Manufacturing history record
 - Distribution records
 - Complaint and recall tracking
-{{/if}}
-{{#if industry == "Aerospace"}}
+{% elif industry == "Aerospace" %}
 - Material certifications
 - Process certifications
 - Non-destructive testing records
 - Heat treatment records
 - Controlled environmental conditions
-{{/if}}
-{{#if industry == "Food"}}
+{% elif industry == "Food" %}
 - Lot coding system
 - Ingredient traceability
 - Production records
 - Distribution tracking
 - Allergen control
-{{/if}}
+{% else %}
+- Product/batch identification system
+- Material traceability to supplier
+- Production history records
+- Distribution and delivery records
+- Quality test results linkage
+{% endif %}
 
 ## 8.5.3 Property Belonging to Customers or External Providers
 

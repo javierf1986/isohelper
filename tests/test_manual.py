@@ -53,10 +53,12 @@ def main():
     print()
     print()
     
-    # Test 2: Multiple documents
-    print("📚 TEST 2: Generate full manual (Clauses 4.1, 4.2, 5.1)")
+    # Test 2: Multiple documents with ALL new templates
+    print("📚 TEST 2: Generate full manual (ALL 15 clauses)")
     print("-"*70)
-    manual_path = gen.generate_full_manual(["4.1", "4.2", "5.1"], company)
+    all_clauses = ["4.1", "4.2", "4.3", "4.4", "5.1", "5.2", "5.3", 
+                   "6.1", "6.2", "7.1", "7.5", "8.1", "8.5", "9.1", "10.2"]
+    manual_path = gen.generate_full_manual(all_clauses, company)
     
     if manual_path:
         print(f"✅ Generated: {Path(manual_path).name}")
