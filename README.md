@@ -1,17 +1,27 @@
-# ISO 9001 AI Documentation Generator
+# ISO Helper - Universal ISO Standards Platform
 
-An autonomous system for generating, managing, and updating ISO 9001:2015 certification documentation using AI and Microsoft's MarkItDown.
+An AI-powered platform for managing, generating, and maintaining documentation for **any ISO standard**. Supporting ISO 9001, 14001, 27001, 45001, and custom standards with intelligent automation and multi-tenant architecture.
 
-## 🎯 Project Overview
+## 🎯 Vision
 
-This system targets medium to large enterprises requiring comprehensive ISO 9001 documentation (300+ pages). It provides:
+Transform compliance documentation from a burden into an intelligent, automated process. ISO Helper is not just an ISO 9001 tool - it's a **universal ISO management hub** where:
 
-- **Autonomous document generation** for ISO 9001:2015 clauses
-- **AI-assisted content creation** tailored to your company
-- **Automatic formatting** using Markdown with export to DOCX, PDF, HTML
-- **Template-based consistency** across all documents
-- **Version tracking** and change management
-- **Compliance verification** (planned for Phase 2)
+- **Any ISO standard** can be uploaded and managed (Quality, Environmental, Security, OH&S, etc.)
+- **AI-powered intelligence** generates comprehensive, client-specific documentation
+- **Multi-standard integration** for organizations with multiple certifications
+- **Client workspaces** provide isolated, customizable environments
+- **Template marketplace** enables sharing and monetization
+
+## 🌟 Key Capabilities
+
+- **Universal ISO Importer**: Upload any ISO standard (PDF/DOCX), AI parses structure automatically
+- **AI Document Generation**: Intelligent, context-aware content creation for any standard
+- **Multi-Standard Integration**: Combine ISO 9001 + 14001 + 27001 with shared procedures
+- **Artifact Management**: Non-conformities, corrective actions, audits, training records
+- **Client Workspaces**: Multi-tenant architecture for consultants managing multiple clients
+- **Template Marketplace**: Share or sell custom templates
+- **White-Label Ready**: Rebrand for consulting firms
+- **Version Management**: Seamlessly update when new standard versions release
 
 ## 📋 Current Status: MVP Phase 1
 
