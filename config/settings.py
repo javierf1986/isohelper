@@ -17,10 +17,14 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
     
     # AI Configuration
+    AI_PROVIDER: str = "mistral"  # mistral, openai, or local
+    MISTRAL_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
-    AI_MODEL: str = "gpt-4"
+    LOCAL_LLM_URL: str = "http://localhost:11434/v1"  # Ollama default
+    AI_MODEL: str = "mistral-medium"
     AI_TEMPERATURE: float = 0.7
     MAX_TOKENS: int = 2000
+    ENABLE_AI_ENHANCEMENT: bool = True  # Toggle AI features on/off
     
     # Database
     DATABASE_URL: str = "sqlite:///./isohelper.db"  # Default to SQLite for development

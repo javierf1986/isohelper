@@ -9,10 +9,12 @@ markitdown==0.0.1a2
 python-multipart==0.0.9
 
 # AI & LLM
-openai==1.51.0
+mistralai==1.0.1  # Primary AI provider
+openai==1.51.0  # Fallback/alternative provider
 langchain==0.3.0
 langchain-openai==0.2.0
 langchain-community==0.3.0
+httpx==0.27.0  # Required for async AI clients
 
 # Database - SQLite for structured data (no extra dependencies needed)
 sqlalchemy==2.0.35
