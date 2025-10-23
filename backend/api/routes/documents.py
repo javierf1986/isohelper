@@ -2,18 +2,21 @@
 Document Generation API Routes
 Epic 1, Feature 1.1: Document Generator
 """
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from pathlib import Path
 import sys
+from sqlalchemy.orm import Session
 
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from backend.services.document_generator import DocumentGenerator
+from backend.database.database import get_db
+from backend.models.iso_models import ISOStandard, ISOClause
 
 router = APIRouter()
 generator = DocumentGenerator()
@@ -43,6 +46,27 @@ class DocumentGenerationRequest(BaseModel):
             }
         }
 
+class WizardGenerationRequest(BaseModel):
+    """Request model from document generation wizard"""
+    iso_standard: str = Field(description="ISO standard ID (e.g., ISO-9001-2015)")
+    selected_clauses: List[str] = Field(description="List of clause numbers to include")
+    company_name: str = Field(description="Company name")
+    company_description: Optional[str] = Field(default=None, description="Company description")
+    scope: Optional[str] = Field(default=None, description="QMS scope")
+    use_ai_enhancement: bool = Field(default=True, description="Enable AI enhancement")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "iso_standard": "ISO-9001-2015",
+                "selected_clauses": ["4.1", "4.2", "5.1"],
+                "company_name": "Acme Corp",
+                "company_description": "Manufacturing company",
+                "scope": "Design and production of widgets",
+                "use_ai_enhancement": True
+            }
+        }
+
 class DocumentResponse(BaseModel):
     """Response model for generated documents"""
     document_id: str = Field(description="Unique document identifier")
@@ -57,6 +81,92 @@ class DocumentResponse(BaseModel):
     message: Optional[str] = Field(default=None, description="Additional information or error message")
 
 @router.post("/generate", response_model=DocumentResponse)
+async def generate_document_wizard(
+    request: WizardGenerationRequest, 
+    db: Session = Depends(get_db)
+):
+    """
+    Generate document from wizard (new format)
+    Accepts ISO standard ID and clause numbers from the frontend wizard
+    """
+    import time
+    import uuid
+    
+    start_time = time.time()
+    doc_id = f"doc_{uuid.uuid4().hex[:12]}"
+    
+    try:
+        # Verify ISO standard exists
+        standard = db.query(ISOStandard).filter(ISOStandard.id == request.iso_standard).first()
+        if not standard:
+            raise HTTPException(status_code=404, detail=f"ISO standard {request.iso_standard} not found")
+        
+        # Verify clauses exist
+        clauses = db.query(ISOClause).filter(
+            ISOClause.standard_id == request.iso_standard,
+            ISOClause.clause_number.in_(request.selected_clauses)
+        ).all()
+        
+        if len(clauses) != len(request.selected_clauses):
+            found_numbers = {str(c.clause_number) for c in clauses}
+            missing = set(request.selected_clauses) - found_numbers
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Clauses not found: {', '.join(missing)}"
+            )
+        
+        # Build company data
+        company_data = {
+            "company_name": request.company_name,
+            "industry": "general",  # Default
+            "company_size": "medium",  # Default
+        }
+        
+        if request.company_description:
+            company_data["custom_context"] = request.company_description
+        
+        if request.scope:
+            company_data["scope"] = request.scope
+        
+        # Generate document
+        file_path = generator.generate_full_manual(request.selected_clauses, company_data)
+        
+        if not file_path:
+            raise HTTPException(
+                status_code=500,
+                detail="Document generation failed"
+            )
+        
+        # Get file info
+        file_path_obj = Path(file_path)
+        file_size = file_path_obj.stat().st_size
+        file_name = file_path_obj.name
+        generation_time = (time.time() - start_time) * 1000
+        
+        return DocumentResponse(
+            document_id=doc_id,
+            status="completed",
+            created_at=datetime.now(),
+            file_path=str(file_path_obj),
+            file_name=file_name,
+            file_size_bytes=file_size,
+            clauses_included=request.selected_clauses,
+            generation_time_ms=round(generation_time, 2),
+            download_url=f"/api/v1/documents/{doc_id}/download",
+            message=f"Successfully generated document with {len(request.selected_clauses)} clause(s)"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return DocumentResponse(
+            document_id=doc_id,
+            status="failed",
+            created_at=datetime.now(),
+            message=f"Generation failed: {str(e)}"
+        )
+
+@router.post("/generate/legacy", response_model=DocumentResponse)
 async def generate_document(request: DocumentGenerationRequest, background_tasks: BackgroundTasks):
     """
     Generate a new ISO 9001 document based on company profile
