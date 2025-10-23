@@ -39,6 +39,8 @@ export interface Document {
   updated_at: string;
   user_id: number;
   workspace_id: number;
+  file_size?: number;
+  generation_time?: number;
 }
 
 export interface GenerateDocumentResponse {
