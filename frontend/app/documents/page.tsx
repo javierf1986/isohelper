@@ -10,11 +10,13 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { documentService } from '@/lib/document-service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { ExportModal } from '@/components/ExportModal';
 
 function DocumentsContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [exportingDoc, setExportingDoc] = useState<{ id: number; title: string; file_path: string } | null>(null);
 
   // Fetch documents
   const { data: documents, isLoading } = useQuery({
@@ -111,8 +113,8 @@ function DocumentsContent() {
                           View
                         </button>
                         <button
+                          onClick={() => setExportingDoc({ id: doc.id, title: doc.title, file_path: doc.file_path })}
                           className="text-green-600 hover:text-green-900"
-                          title="Export - Coming Soon"
                         >
                           Export
                         </button>
@@ -177,6 +179,16 @@ function DocumentsContent() {
           </div>
         )}
       </main>
+
+      {/* Export Modal */}
+      {exportingDoc && (
+        <ExportModal
+          isOpen={!!exportingDoc}
+          onClose={() => setExportingDoc(null)}
+          documentPath={exportingDoc.file_path}
+          documentTitle={exportingDoc.title}
+        />
+      )}
     </div>
   );
 }
