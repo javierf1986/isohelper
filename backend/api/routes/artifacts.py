@@ -500,6 +500,24 @@ async def add_root_cause(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.delete("/nc/{nc_id}")
+async def delete_nc(
+    nc_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a Non-Conformity"""
+    try:
+        ArtifactService.delete_nc(
+            db=db,
+            nc_id=nc_id,
+            workspace_id=current_user.workspace_id
+        )
+        return {"message": "Non-Conformity deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ===== Corrective Action Endpoints =====
 
 @router.post("/ca", response_model=CAResponse, status_code=status.HTTP_201_CREATED)
@@ -581,6 +599,24 @@ async def verify_ca_effectiveness(
             "ca_number": ca.ca_number,
             "is_effective": ca.is_effective
         }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/ca/{ca_id}")
+async def delete_ca(
+    ca_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a Corrective Action"""
+    try:
+        ArtifactService.delete_ca(
+            db=db,
+            ca_id=ca_id,
+            workspace_id=current_user.workspace_id
+        )
+        return {"message": "Corrective Action deleted successfully"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -801,6 +837,24 @@ async def complete_audit(
             "audit_number": audit.audit_number,
             "status": audit.status.value
         }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/audit/{audit_id}")
+async def delete_audit(
+    audit_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete an Internal Audit"""
+    try:
+        ArtifactService.delete_audit(
+            db=db,
+            audit_id=audit_id,
+            workspace_id=current_user.workspace_id
+        )
+        return {"message": "Internal Audit deleted successfully"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
@@ -1138,6 +1192,24 @@ async def update_management_review(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.delete("/management-review/{review_id}")
+async def delete_management_review(
+    review_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a Management Review"""
+    try:
+        ArtifactService.delete_management_review(
+            db=db,
+            review_id=review_id,
+            workspace_id=current_user.workspace_id
+        )
+        return {"message": "Management Review deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ===== Training Record Endpoints =====
 
 class TrainingRecordCreateRequest(BaseModel):
@@ -1338,6 +1410,24 @@ async def update_training_record(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.delete("/training/{training_id}")
+async def delete_training_record(
+    training_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a Training Record"""
+    try:
+        ArtifactService.delete_training_record(
+            db=db,
+            training_id=training_id,
+            workspace_id=current_user.workspace_id
+        )
+        return {"message": "Training Record deleted successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ===== Customer Complaint Endpoints =====
 
 class CustomerComplaintCreateRequest(BaseModel):
@@ -1526,5 +1616,23 @@ async def update_customer_complaint(
             created_at=complaint.created_at.isoformat(),
             updated_at=complaint.updated_at.isoformat()
         )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/complaint/{complaint_id}")
+async def delete_customer_complaint(
+    complaint_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a Customer Complaint"""
+    try:
+        ArtifactService.delete_customer_complaint(
+            db=db,
+            complaint_id=complaint_id,
+            workspace_id=current_user.workspace_id
+        )
+        return {"message": "Customer Complaint deleted successfully"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

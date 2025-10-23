@@ -67,6 +67,30 @@ export default function AuditDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this Internal Audit? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8889/api/v1/artifacts/audit/${auditId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete audit');
+      }
+
+      router.push('/artifacts/audit');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete Internal Audit');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       planned: 'bg-blue-100 text-blue-800',
@@ -157,6 +181,12 @@ export default function AuditDetailPage() {
             </button>
             <button className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
               Export PDF
+            </button>
+            <button 
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Delete
             </button>
           </div>
         </div>

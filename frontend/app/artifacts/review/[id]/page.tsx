@@ -59,6 +59,30 @@ export default function ReviewDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this Management Review? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8889/api/v1/artifacts/management-review/${reviewId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete Management Review');
+      }
+
+      router.push('/artifacts/review');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete Management Review');
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -135,6 +159,12 @@ export default function ReviewDetailPage() {
             </button>
             <button className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
               Export PDF
+            </button>
+            <button 
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Delete
             </button>
           </div>
         </div>

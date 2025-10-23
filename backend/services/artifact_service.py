@@ -122,6 +122,28 @@ class ArtifactService:
         return nc
     
     @staticmethod
+    def delete_nc(
+        db: Session,
+        nc_id: str,
+        workspace_id: str
+    ) -> bool:
+        """Delete a Non-Conformity"""
+        nc = db.query(NonConformity).filter(
+            and_(
+                NonConformity.id == nc_id,
+                NonConformity.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not nc:
+            raise ValueError(f"NC {nc_id} not found")
+        
+        db.delete(nc)
+        db.commit()
+        
+        return True
+    
+    @staticmethod
     def add_root_cause(
         db: Session,
         nc_id: str,
@@ -244,6 +266,28 @@ class ArtifactService:
         db.refresh(ca)
         
         return ca
+    
+    @staticmethod
+    def delete_ca(
+        db: Session,
+        ca_id: str,
+        workspace_id: str
+    ) -> bool:
+        """Delete a Corrective Action"""
+        ca = db.query(CorrectiveAction).filter(
+            and_(
+                CorrectiveAction.id == ca_id,
+                CorrectiveAction.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not ca:
+            raise ValueError(f"CA {ca_id} not found")
+        
+        db.delete(ca)
+        db.commit()
+        
+        return True
     
     @staticmethod
     def update_ca_status(
@@ -391,6 +435,28 @@ class ArtifactService:
         db.refresh(audit)
         
         return audit
+    
+    @staticmethod
+    def delete_audit(
+        db: Session,
+        audit_id: str,
+        workspace_id: str
+    ) -> bool:
+        """Delete an Internal Audit"""
+        audit = db.query(InternalAudit).filter(
+            and_(
+                InternalAudit.id == audit_id,
+                InternalAudit.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not audit:
+            raise ValueError(f"Audit {audit_id} not found")
+        
+        db.delete(audit)
+        db.commit()
+        
+        return True
     
     @staticmethod
     def complete_audit(
@@ -661,6 +727,28 @@ class ArtifactService:
         return review
     
     @staticmethod
+    def delete_management_review(
+        db: Session,
+        review_id: str,
+        workspace_id: str
+    ) -> bool:
+        """Delete a Management Review"""
+        review = db.query(ManagementReview).filter(
+            and_(
+                ManagementReview.id == review_id,
+                ManagementReview.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not review:
+            raise ValueError(f"Management Review {review_id} not found")
+        
+        db.delete(review)
+        db.commit()
+        
+        return True
+    
+    @staticmethod
     def get_workspace_reviews(
         db: Session,
         workspace_id: str,
@@ -749,6 +837,28 @@ class ArtifactService:
         db.refresh(training)
         
         return training
+    
+    @staticmethod
+    def delete_training_record(
+        db: Session,
+        training_id: str,
+        workspace_id: str
+    ) -> bool:
+        """Delete a Training Record"""
+        training = db.query(TrainingRecord).filter(
+            and_(
+                TrainingRecord.id == training_id,
+                TrainingRecord.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not training:
+            raise ValueError(f"Training Record {training_id} not found")
+        
+        db.delete(training)
+        db.commit()
+        
+        return True
     
     @staticmethod
     def get_workspace_training(
@@ -862,6 +972,28 @@ class ArtifactService:
         db.refresh(complaint)
         
         return complaint
+    
+    @staticmethod
+    def delete_customer_complaint(
+        db: Session,
+        complaint_id: str,
+        workspace_id: str
+    ) -> bool:
+        """Delete a Customer Complaint"""
+        complaint = db.query(CustomerComplaint).filter(
+            and_(
+                CustomerComplaint.id == complaint_id,
+                CustomerComplaint.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not complaint:
+            raise ValueError(f"Customer Complaint {complaint_id} not found")
+        
+        db.delete(complaint)
+        db.commit()
+        
+        return True
     
     @staticmethod
     def get_workspace_complaints(

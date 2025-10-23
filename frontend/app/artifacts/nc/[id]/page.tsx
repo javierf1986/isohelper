@@ -67,6 +67,32 @@ export default function NCDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this Non-Conformity? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("access_token");
+      
+      const response = await fetch(`http://localhost:8889/api/v1/artifacts/nc/${ncId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete NC");
+      }
+
+      // Redirect to list after successful deletion
+      router.push("/artifacts/nc");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete Non-Conformity");
+    }
+  };
+
   const getSeverityColor = (severity: string): string => {
     switch (severity.toUpperCase()) {
       case "CRITICAL":
@@ -166,6 +192,12 @@ export default function NCDetailPage() {
               className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg transition"
             >
               Export PDF
+            </button>
+            <button
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition"
+            >
+              Delete
             </button>
           </div>
         </div>

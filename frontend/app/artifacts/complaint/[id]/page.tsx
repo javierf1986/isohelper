@@ -67,6 +67,30 @@ export default function ComplaintDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this Customer Complaint? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8889/api/v1/artifacts/complaint/${complaintId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete Customer Complaint');
+      }
+
+      router.push('/artifacts/complaint');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete Customer Complaint');
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
       urgent: 'bg-red-100 text-red-800',
@@ -160,6 +184,12 @@ export default function ComplaintDetailPage() {
             </button>
             <button className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
               Export PDF
+            </button>
+            <button 
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Delete
             </button>
           </div>
         </div>

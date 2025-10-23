@@ -69,6 +69,30 @@ export default function CADetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this Corrective Action? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8889/api/v1/artifacts/ca/${caId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete Corrective Action');
+      }
+
+      router.push('/artifacts/ca');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete Corrective Action');
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     const colors: Record<string, string> = {
       critical: 'bg-red-100 text-red-800',
@@ -159,6 +183,12 @@ export default function CADetailPage() {
             </button>
             <button className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
               Export PDF
+            </button>
+            <button 
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Delete
             </button>
           </div>
         </div>
