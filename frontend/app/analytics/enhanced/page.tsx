@@ -23,6 +23,11 @@ export default function EnhancedAnalyticsPage() {
   const [auditTrends, setAuditTrends] = useState<any[]>([]);
   const [severityData, setSeverityData] = useState<any>(null);
   const [categoryData, setCategoryData] = useState<any>(null);
+  const [costSummary, setCostSummary] = useState<any>(null);
+  const [costTrends, setCostTrends] = useState<any>(null);
+  const [budgetTracking, setBudgetTracking] = useState<any>(null);
+  const [costByCategory, setCostByCategory] = useState<any>(null);
+  const [predictions, setPredictions] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<number>(12); // months
@@ -70,6 +75,23 @@ export default function EnhancedAnalyticsPage() {
       // Fetch category breakdown
       const categoryRes = await fetch(`${baseUrl}/category-breakdown`, { headers });
       if (categoryRes.ok) setCategoryData(await categoryRes.json());
+
+      // Fetch cost analytics
+      const costSummaryRes = await fetch(`${baseUrl}/cost-summary`, { headers });
+      if (costSummaryRes.ok) setCostSummary(await costSummaryRes.json());
+
+      const costTrendsRes = await fetch(`${baseUrl}/cost-trends?months=${timeRange}`, { headers });
+      if (costTrendsRes.ok) setCostTrends(await costTrendsRes.json());
+
+      const budgetTrackingRes = await fetch(`${baseUrl}/budget-tracking`, { headers });
+      if (budgetTrackingRes.ok) setBudgetTracking(await budgetTrackingRes.json());
+
+      const costByCategoryRes = await fetch(`${baseUrl}/cost-by-category`, { headers });
+      if (costByCategoryRes.ok) setCostByCategory(await costByCategoryRes.json());
+
+      // Fetch predictive analytics
+      const predictionsRes = await fetch(`${baseUrl}/predictions`, { headers });
+      if (predictionsRes.ok) setPredictions(await predictionsRes.json());
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load analytics');
@@ -280,7 +302,7 @@ export default function EnhancedAnalyticsPage() {
 
           {/* Category Breakdown */}
           {categoryData && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
               {categoryData.nc_by_category.length > 0 && (
                 <TrendBarChart
                   data={categoryData.nc_by_category}
@@ -305,6 +327,333 @@ export default function EnhancedAnalyticsPage() {
                 />
               )}
             </div>
+          )}
+
+          {/* Cost Tracking Section */}
+          {costSummary && budgetTracking && (
+            <>
+              <div className="mb-4 mt-12">
+                <h2 className="text-2xl font-bold text-gray-900">Cost Tracking & Budget Management</h2>
+                <p className="text-gray-600">Financial insights and budget performance</p>
+              </div>
+
+              {/* Cost Metrics */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <MetricCard
+                  title="Total Estimated"
+                  value={`$${(costSummary.totals?.estimated || 0).toLocaleString()}`}
+                  subtitle="Planned budget"
+                  icon="💰"
+                  color="blue"
+                />
+                <MetricCard
+                  title="Total Actual"
+                  value={`$${(costSummary.totals?.actual || 0).toLocaleString()}`}
+                  subtitle="Actual spend"
+                  icon="💵"
+                  color="green"
+                />
+                <MetricCard
+                  title="Potential NC Cost"
+                  value={`$${(costSummary.totals?.potential_nc || 0).toLocaleString()}`}
+                  subtitle="Risk exposure"
+                  icon="⚠️"
+                  color="red"
+                />
+                <MetricCard
+                  title="Budget Variance"
+                  value={`${budgetTracking.overall?.total_variance >= 0 ? '+' : ''}$${(budgetTracking.overall?.total_variance || 0).toLocaleString()}`}
+                  subtitle={budgetTracking.overall?.total_variance >= 0 ? 'Over budget' : 'Under budget'}
+                  icon="📊"
+                  color={budgetTracking.overall?.total_variance >= 0 ? 'red' : 'green'}
+                />
+              </div>
+
+              {/* Cost Distribution */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                {costSummary && (
+                  <DonutChart
+                    data={[
+                      { name: 'Corrective Actions', value: costSummary.corrective_actions?.actual_cost || 0 },
+                      { name: 'Audits', value: costSummary.audits?.actual_cost || 0 },
+                      { name: 'Training', value: costSummary.training?.total_cost || 0 },
+                      { name: 'Complaints', value: (costSummary.complaints?.resolution_cost || 0) + (costSummary.complaints?.compensation_amount || 0) },
+                      { name: 'Management Reviews', value: costSummary.management_reviews?.meeting_cost || 0 }
+                    ]}
+                    nameKey="name"
+                    valueKey="value"
+                    title="Cost Distribution by Artifact Type"
+                    height={300}
+                  />
+                )}
+
+                {budgetTracking && (
+                  <div className="bg-white p-6 rounded-lg shadow">
+                    <h3 className="text-lg font-semibold mb-4">Budget Performance</h3>
+                    <div className="space-y-4">
+                      <div className="border-b pb-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-gray-700">Corrective Actions</span>
+                          <span className={`text-sm font-semibold ${budgetTracking.corrective_actions?.variance >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {budgetTracking.corrective_actions?.variance >= 0 ? '+' : ''}${(budgetTracking.corrective_actions?.variance || 0).toLocaleString()} 
+                            ({budgetTracking.corrective_actions?.variance_percent}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${budgetTracking.corrective_actions?.variance >= 0 ? 'bg-red-500' : 'bg-green-500'}`}
+                            style={{ width: `${Math.min(100, Math.abs(budgetTracking.corrective_actions?.variance_percent || 0))}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Est: ${(budgetTracking.corrective_actions?.estimated || 0).toLocaleString()}</span>
+                          <span>Act: ${(budgetTracking.corrective_actions?.actual || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <div className="border-b pb-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-medium text-gray-700">Audits</span>
+                          <span className={`text-sm font-semibold ${budgetTracking.audits?.variance >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {budgetTracking.audits?.variance >= 0 ? '+' : ''}${(budgetTracking.audits?.variance || 0).toLocaleString()} 
+                            ({budgetTracking.audits?.variance_percent}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${budgetTracking.audits?.variance >= 0 ? 'bg-red-500' : 'bg-green-500'}`}
+                            style={{ width: `${Math.min(100, Math.abs(budgetTracking.audits?.variance_percent || 0))}%` }}
+                          ></div>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Est: ${(budgetTracking.audits?.estimated || 0).toLocaleString()}</span>
+                          <span>Act: ${(budgetTracking.audits?.actual || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <div className="flex justify-between text-sm font-medium">
+                          <span>Budget Compliance</span>
+                          <span className="text-blue-600">
+                            {budgetTracking.corrective_actions?.on_budget_count + budgetTracking.audits?.on_budget_count} / 
+                            {budgetTracking.corrective_actions?.on_budget_count + budgetTracking.corrective_actions?.over_budget_count + 
+                             budgetTracking.audits?.on_budget_count + budgetTracking.audits?.over_budget_count} items
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Cost Trends */}
+              {costTrends && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                  {costTrends.ca_costs && costTrends.ca_costs.length > 0 && (
+                    <TrendLineChart
+                      data={costTrends.ca_costs}
+                      xKey="month"
+                      yKeys={[
+                        { key: 'estimated', name: 'Estimated', color: COLORS.tertiary },
+                        { key: 'actual', name: 'Actual', color: COLORS.danger }
+                      ]}
+                      title="CA Cost Trends (Estimated vs Actual)"
+                      height={300}
+                    />
+                  )}
+
+                  {costTrends.training_costs && costTrends.training_costs.length > 0 && (
+                    <TrendAreaChart
+                      data={costTrends.training_costs}
+                      xKey="month"
+                      yKeys={[
+                        { key: 'cost', name: 'Training Cost', color: COLORS.purple }
+                      ]}
+                      title="Training Cost Trends"
+                      height={300}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Cost by Category */}
+              {costByCategory && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                  {costByCategory.nc_by_category && costByCategory.nc_by_category.length > 0 && (
+                    <TrendBarChart
+                      data={costByCategory.nc_by_category}
+                      xKey="category"
+                      yKeys={[
+                        { key: 'cost', name: 'Potential Cost', color: COLORS.danger }
+                      ]}
+                      title="NC Potential Cost by Category"
+                      height={300}
+                    />
+                  )}
+
+                  {costByCategory.ca_by_type && costByCategory.ca_by_type.length > 0 && (
+                    <TrendBarChart
+                      data={costByCategory.ca_by_type}
+                      xKey="type"
+                      yKeys={[
+                        { key: 'cost', name: 'Actual Cost', color: COLORS.tertiary }
+                      ]}
+                      title="CA Actual Cost by Type"
+                      height={300}
+                    />
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Predictive Analytics Section */}
+          {predictions && (
+            <>
+              <div className="mb-4 mt-12">
+                <h2 className="text-2xl font-bold text-gray-900">Predictive Analytics & Risk Assessment</h2>
+                <p className="text-gray-600">AI-powered forecasting and risk insights</p>
+              </div>
+
+              {/* Risk Score Card */}
+              <div className="mb-8">
+                <div className="bg-white p-8 rounded-lg shadow-lg border-l-4" style={{
+                  borderLeftColor: predictions.risk_assessment?.level === 'high' ? '#EF4444' : 
+                                    predictions.risk_assessment?.level === 'medium' ? '#F59E0B' : '#10B981'
+                }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">System Risk Score</h3>
+                      <div className="flex items-baseline gap-4">
+                        <div className="text-5xl font-bold" style={{
+                          color: predictions.risk_assessment?.level === 'high' ? '#EF4444' : 
+                                 predictions.risk_assessment?.level === 'medium' ? '#F59E0B' : '#10B981'
+                        }}>
+                          {predictions.risk_assessment?.score || 0}
+                        </div>
+                        <div className="text-xl text-gray-500">/ 100</div>
+                      </div>
+                      <div className="mt-2">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                          predictions.risk_assessment?.level === 'high' ? 'bg-red-100 text-red-800' :
+                          predictions.risk_assessment?.level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {predictions.risk_assessment?.level?.toUpperCase()} RISK
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-6xl">
+                      {predictions.risk_assessment?.level === 'high' ? '🔴' : 
+                       predictions.risk_assessment?.level === 'medium' ? '🟡' : '🟢'}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 pt-6 border-t">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">Risk Factors:</h4>
+                    {predictions.risk_assessment?.factors && predictions.risk_assessment.factors.length > 0 ? (
+                      <ul className="space-y-2">
+                        {predictions.risk_assessment.factors.map((factor: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                            <span className="text-red-500 mt-1">⚠️</span>
+                            <span>{factor}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-green-600">✓ No significant risk factors identified</p>
+                    )}
+                  </div>
+
+                  <div className="mt-6 pt-6 border-t">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Recommendation:</h4>
+                    <p className="text-sm text-gray-600">{predictions.risk_assessment?.recommendation}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* NC Forecast */}
+              {predictions.nc_forecast && (
+                <div className="mb-8">
+                  <TrendLineChart
+                    data={[
+                      ...predictions.nc_forecast.historical.map((d: any) => ({ ...d, type: 'historical' })),
+                      ...predictions.nc_forecast.predictions.map((d: any) => ({ 
+                        month: d.month, 
+                        count: d.predicted_count,
+                        type: 'forecast'
+                      }))
+                    ]}
+                    xKey="month"
+                    yKeys={[
+                      { key: 'count', name: 'NC Count (Historical & Forecast)', color: COLORS.primary }
+                    ]}
+                    title="NC Trend Forecast (Next 3 Months)"
+                    height={300}
+                  />
+                  {predictions.nc_forecast.predictions.length > 0 && (
+                    <div className="mt-2 text-sm text-gray-600 bg-blue-50 p-3 rounded">
+                      <span className="font-medium">📊 Forecast:</span> Expected{' '}
+                      {predictions.nc_forecast.predictions.map((p: any, idx: number) => (
+                        <span key={idx}>
+                          {p.predicted_count} NC{p.predicted_count !== 1 ? 's' : ''} in {p.month}
+                          {idx < predictions.nc_forecast.predictions.length - 1 ? ', ' : ''}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* CA Completion Predictions */}
+              {predictions.ca_predictions && predictions.ca_predictions.length > 0 && (
+                <div className="bg-white p-6 rounded-lg shadow mb-8">
+                  <h3 className="text-lg font-semibold mb-4">Corrective Action Completion Predictions</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">CA Number</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Target Date</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Predicted</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {predictions.ca_predictions.map((ca: any) => (
+                          <tr key={ca.ca_id}>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{ca.ca_number}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{ca.title}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{ca.target_date}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{ca.predicted_completion_date}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 bg-gray-200 rounded-full h-2 w-20">
+                                  <div 
+                                    className="bg-blue-600 h-2 rounded-full"
+                                    style={{ width: `${ca.progress_percent}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-xs text-gray-600">{ca.progress_percent}%</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                ca.on_track ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                                {ca.on_track ? '✓ On Track' : '⚠ At Risk'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

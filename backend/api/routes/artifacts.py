@@ -6,6 +6,7 @@ from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import case
 from pydantic import BaseModel
 
 from backend.database.session import get_db
@@ -1636,3 +1637,751 @@ async def delete_customer_complaint(
         return {"message": "Customer Complaint deleted successfully"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+# ===== Enhanced Analytics Endpoints =====
+
+@router.get("/analytics/trends/nc-by-month")
+async def get_nc_trends_by_month(
+    months: int = 12,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get NC trends by month for the last N months"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, extract
+    
+    workspace_id = current_user.workspace_id
+    start_date = datetime.now() - timedelta(days=months * 30)
+    
+    # Query NC grouped by month
+    results = db.query(
+        extract('year', NonConformity.identified_date).label('year'),
+        extract('month', NonConformity.identified_date).label('month'),
+        func.count(NonConformity.id).label('count'),
+        func.sum(case((NonConformity.status == 'Open', 1), else_=0)).label('open'),
+        func.sum(case((NonConformity.status == 'Closed', 1), else_=0)).label('closed')
+    ).filter(
+        NonConformity.workspace_id == workspace_id,
+        NonConformity.identified_date >= start_date
+    ).group_by('year', 'month').order_by('year', 'month').all()
+    
+    trends = []
+    for r in results:
+        trends.append({
+            'month': f"{int(r.year)}-{int(r.month):02d}",
+            'count': r.count,
+            'open': r.open or 0,
+            'closed': r.closed or 0
+        })
+    
+    return {"trends": trends}
+
+
+@router.get("/analytics/trends/ca-by-month")
+async def get_ca_trends_by_month(
+    months: int = 12,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get CA trends by month for the last N months"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, extract
+    
+    workspace_id = current_user.workspace_id
+    start_date = datetime.now() - timedelta(days=months * 30)
+    
+    # Query CA grouped by month
+    results = db.query(
+        extract('year', CorrectiveAction.action_date).label('year'),
+        extract('month', CorrectiveAction.action_date).label('month'),
+        func.count(CorrectiveAction.id).label('count'),
+        func.sum(case((CorrectiveAction.status == 'Completed', 1), else_=0)).label('completed'),
+        func.sum(case((CorrectiveAction.effectiveness == 'Effective', 1), else_=0)).label('effective')
+    ).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.action_date >= start_date
+    ).group_by('year', 'month').order_by('year', 'month').all()
+    
+    trends = []
+    for r in results:
+        trends.append({
+            'month': f"{int(r.year)}-{int(r.month):02d}",
+            'count': r.count,
+            'completed': r.completed or 0,
+            'effective': r.effective or 0
+        })
+    
+    return {"trends": trends}
+
+
+@router.get("/analytics/trends/audits-by-quarter")
+async def get_audit_trends_by_quarter(
+    years: int = 2,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get audit trends by quarter"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, extract
+    
+    workspace_id = current_user.workspace_id
+    start_date = datetime.now() - timedelta(days=years * 365)
+    
+    # Query audits grouped by quarter
+    results = db.query(
+        extract('year', InternalAudit.audit_date).label('year'),
+        extract('quarter', InternalAudit.audit_date).label('quarter'),
+        func.count(InternalAudit.id).label('count'),
+        func.sum(InternalAudit.major_findings).label('major_findings'),
+        func.sum(InternalAudit.minor_findings).label('minor_findings')
+    ).filter(
+        InternalAudit.workspace_id == workspace_id,
+        InternalAudit.audit_date >= start_date
+    ).group_by('year', 'quarter').order_by('year', 'quarter').all()
+    
+    trends = []
+    for r in results:
+        trends.append({
+            'quarter': f"{int(r.year)}-Q{int(r.quarter)}",
+            'count': r.count,
+            'major_findings': r.major_findings or 0,
+            'minor_findings': r.minor_findings or 0
+        })
+    
+    return {"trends": trends}
+
+
+@router.get("/analytics/severity-distribution")
+async def get_severity_distribution(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get severity distribution across all artifacts"""
+    from sqlalchemy import func
+    
+    workspace_id = current_user.workspace_id
+    
+    # NC by severity
+    nc_severity = db.query(
+        NonConformity.severity,
+        func.count(NonConformity.id).label('count')
+    ).filter(
+        NonConformity.workspace_id == workspace_id
+    ).group_by(NonConformity.severity).all()
+    
+    # Customer complaints by priority
+    complaint_priority = db.query(
+        CustomerComplaint.priority,
+        func.count(CustomerComplaint.id).label('count')
+    ).filter(
+        CustomerComplaint.workspace_id == workspace_id
+    ).group_by(CustomerComplaint.priority).all()
+    
+    return {
+        'nc_by_severity': [{'severity': r.severity, 'count': r.count} for r in nc_severity],
+        'complaints_by_priority': [{'priority': r.priority, 'count': r.count} for r in complaint_priority]
+    }
+
+
+@router.get("/analytics/category-breakdown")
+async def get_category_breakdown(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get category breakdown for NCs and CAs"""
+    from sqlalchemy import func
+    
+    workspace_id = current_user.workspace_id
+    
+    # NC by category
+    nc_categories = db.query(
+        NonConformity.category,
+        func.count(NonConformity.id).label('count')
+    ).filter(
+        NonConformity.workspace_id == workspace_id
+    ).group_by(NonConformity.category).order_by(func.count(NonConformity.id).desc()).limit(10).all()
+    
+    # CA by action type
+    ca_types = db.query(
+        CorrectiveAction.action_type,
+        func.count(CorrectiveAction.id).label('count')
+    ).filter(
+        CorrectiveAction.workspace_id == workspace_id
+    ).group_by(CorrectiveAction.action_type).order_by(func.count(CorrectiveAction.id).desc()).limit(10).all()
+    
+    return {
+        'nc_by_category': [{'category': r.category, 'count': r.count} for r in nc_categories],
+        'ca_by_type': [{'type': r.action_type, 'count': r.count} for r in ca_types]
+    }
+
+
+@router.get("/analytics/performance-metrics")
+async def get_performance_metrics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get key performance metrics"""
+    from sqlalchemy import func
+    from datetime import datetime, timedelta
+    
+    workspace_id = current_user.workspace_id
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    
+    # NC metrics
+    total_nc = db.query(func.count(NonConformity.id)).filter(
+        NonConformity.workspace_id == workspace_id
+    ).scalar() or 0
+    
+    open_nc = db.query(func.count(NonConformity.id)).filter(
+        NonConformity.workspace_id == workspace_id,
+        NonConformity.status == 'Open'
+    ).scalar() or 0
+    
+    recent_nc = db.query(func.count(NonConformity.id)).filter(
+        NonConformity.workspace_id == workspace_id,
+        NonConformity.identified_date >= thirty_days_ago
+    ).scalar() or 0
+    
+    # CA metrics
+    total_ca = db.query(func.count(CorrectiveAction.id)).filter(
+        CorrectiveAction.workspace_id == workspace_id
+    ).scalar() or 0
+    
+    completed_ca = db.query(func.count(CorrectiveAction.id)).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.status == 'Completed'
+    ).scalar() or 0
+    
+    effective_ca = db.query(func.count(CorrectiveAction.id)).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.effectiveness == 'Effective'
+    ).scalar() or 0
+    
+    # Audit metrics
+    total_audits = db.query(func.count(InternalAudit.id)).filter(
+        InternalAudit.workspace_id == workspace_id
+    ).scalar() or 0
+    
+    completed_audits = db.query(func.count(InternalAudit.id)).filter(
+        InternalAudit.workspace_id == workspace_id,
+        InternalAudit.status == 'Completed'
+    ).scalar() or 0
+    
+    # Training metrics
+    total_training = db.query(func.count(TrainingRecord.id)).filter(
+        TrainingRecord.workspace_id == workspace_id
+    ).scalar() or 0
+    
+    completed_training = db.query(func.count(TrainingRecord.id)).filter(
+        TrainingRecord.workspace_id == workspace_id,
+        TrainingRecord.status == 'Completed'
+    ).scalar() or 0
+    
+    return {
+        'nc': {
+            'total': total_nc,
+            'open': open_nc,
+            'recent_30_days': recent_nc,
+            'closure_rate': round((total_nc - open_nc) / total_nc * 100, 1) if total_nc > 0 else 0
+        },
+        'ca': {
+            'total': total_ca,
+            'completed': completed_ca,
+            'effective': effective_ca,
+            'completion_rate': round(completed_ca / total_ca * 100, 1) if total_ca > 0 else 0,
+            'effectiveness_rate': round(effective_ca / completed_ca * 100, 1) if completed_ca > 0 else 0
+        },
+        'audits': {
+            'total': total_audits,
+            'completed': completed_audits,
+            'completion_rate': round(completed_audits / total_audits * 100, 1) if total_audits > 0 else 0
+        },
+        'training': {
+            'total': total_training,
+            'completed': completed_training,
+            'completion_rate': round(completed_training / total_training * 100, 1) if total_training > 0 else 0
+        }
+    }
+
+
+@router.get("/analytics/cost-summary")
+def get_cost_summary(
+    workspace_id: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get cost summary by artifact type"""
+    
+    # NC costs
+    nc_cost = db.query(
+        func.count(NonConformity.id).label('count'),
+        func.coalesce(func.sum(NonConformity.potential_cost), 0).label('total')
+    ).filter(
+        NonConformity.workspace_id == workspace_id,
+        NonConformity.potential_cost.isnot(None)
+    ).first()
+    
+    # CA costs
+    ca_costs = db.query(
+        func.count(CorrectiveAction.id).label('count'),
+        func.coalesce(func.sum(CorrectiveAction.estimated_cost), 0).label('estimated'),
+        func.coalesce(func.sum(CorrectiveAction.actual_cost), 0).label('actual'),
+        func.coalesce(func.sum(CorrectiveAction.estimated_hours), 0).label('est_hours'),
+        func.coalesce(func.sum(CorrectiveAction.actual_hours), 0).label('act_hours')
+    ).filter(
+        CorrectiveAction.workspace_id == workspace_id
+    ).first()
+    
+    # Audit costs
+    audit_costs = db.query(
+        func.count(InternalAudit.id).label('count'),
+        func.coalesce(func.sum(InternalAudit.estimated_cost), 0).label('estimated'),
+        func.coalesce(func.sum(InternalAudit.actual_cost), 0).label('actual'),
+        func.coalesce(func.sum(InternalAudit.auditor_hours), 0).label('hours')
+    ).filter(
+        InternalAudit.workspace_id == workspace_id
+    ).first()
+    
+    # Management Review costs
+    mr_costs = db.query(
+        func.count(ManagementReview.id).label('count'),
+        func.coalesce(func.sum(ManagementReview.meeting_cost), 0).label('cost'),
+        func.coalesce(func.sum(ManagementReview.preparation_hours), 0).label('hours')
+    ).filter(
+        ManagementReview.workspace_id == workspace_id
+    ).first()
+    
+    # Training costs
+    training_costs = db.query(
+        func.count(TrainingRecord.id).label('count'),
+        func.coalesce(func.sum(TrainingRecord.training_cost), 0).label('total'),
+        func.coalesce(func.sum(TrainingRecord.instructor_fee), 0).label('instructor'),
+        func.coalesce(func.sum(TrainingRecord.material_cost), 0).label('materials'),
+        func.coalesce(func.sum(TrainingRecord.venue_cost), 0).label('venue')
+    ).filter(
+        TrainingRecord.workspace_id == workspace_id
+    ).first()
+    
+    # Complaint costs
+    complaint_costs = db.query(
+        func.count(CustomerComplaint.id).label('count'),
+        func.coalesce(func.sum(CustomerComplaint.resolution_cost), 0).label('resolution'),
+        func.coalesce(func.sum(CustomerComplaint.compensation_amount), 0).label('compensation'),
+        func.coalesce(func.sum(CustomerComplaint.investigation_hours), 0).label('hours')
+    ).filter(
+        CustomerComplaint.workspace_id == workspace_id
+    ).first()
+    
+    return {
+        'non_conformities': {
+            'count': nc_cost.count,
+            'potential_cost': float(nc_cost.total),
+            'avg_cost': float(nc_cost.total / nc_cost.count) if nc_cost.count > 0 else 0
+        },
+        'corrective_actions': {
+            'count': ca_costs.count,
+            'estimated_cost': float(ca_costs.estimated),
+            'actual_cost': float(ca_costs.actual),
+            'variance': float(ca_costs.actual - ca_costs.estimated),
+            'estimated_hours': float(ca_costs.est_hours),
+            'actual_hours': float(ca_costs.act_hours)
+        },
+        'audits': {
+            'count': audit_costs.count,
+            'estimated_cost': float(audit_costs.estimated),
+            'actual_cost': float(audit_costs.actual),
+            'variance': float(audit_costs.actual - audit_costs.estimated),
+            'auditor_hours': float(audit_costs.hours)
+        },
+        'management_reviews': {
+            'count': mr_costs.count,
+            'meeting_cost': float(mr_costs.cost),
+            'preparation_hours': float(mr_costs.hours)
+        },
+        'training': {
+            'count': training_costs.count,
+            'total_cost': float(training_costs.total),
+            'instructor_fees': float(training_costs.instructor),
+            'material_costs': float(training_costs.materials),
+            'venue_costs': float(training_costs.venue)
+        },
+        'complaints': {
+            'count': complaint_costs.count,
+            'resolution_cost': float(complaint_costs.resolution),
+            'compensation_amount': float(complaint_costs.compensation),
+            'investigation_hours': float(complaint_costs.hours)
+        },
+        'totals': {
+            'estimated': float(ca_costs.estimated + audit_costs.estimated),
+            'actual': float(ca_costs.actual + audit_costs.actual + mr_costs.cost + training_costs.total + complaint_costs.resolution + complaint_costs.compensation),
+            'potential_nc': float(nc_cost.total)
+        }
+    }
+
+
+@router.get("/analytics/cost-trends")
+def get_cost_trends(
+    workspace_id: str = Query(...),
+    months: int = Query(12, ge=1, le=24),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get monthly cost trends"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import extract
+    
+    cutoff_date = datetime.utcnow() - timedelta(days=months * 30)
+    
+    # CA cost trends
+    ca_trends = db.query(
+        extract('year', CorrectiveAction.created_at).label('year'),
+        extract('month', CorrectiveAction.created_at).label('month'),
+        func.coalesce(func.sum(CorrectiveAction.estimated_cost), 0).label('estimated'),
+        func.coalesce(func.sum(CorrectiveAction.actual_cost), 0).label('actual')
+    ).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.created_at >= cutoff_date
+    ).group_by('year', 'month').order_by('year', 'month').all()
+    
+    # Training cost trends
+    training_trends = db.query(
+        extract('year', TrainingRecord.training_date).label('year'),
+        extract('month', TrainingRecord.training_date).label('month'),
+        func.coalesce(func.sum(TrainingRecord.training_cost), 0).label('cost')
+    ).filter(
+        TrainingRecord.workspace_id == workspace_id,
+        TrainingRecord.training_date >= cutoff_date
+    ).group_by('year', 'month').order_by('year', 'month').all()
+    
+    # Complaint cost trends
+    complaint_trends = db.query(
+        extract('year', CustomerComplaint.complaint_date).label('year'),
+        extract('month', CustomerComplaint.complaint_date).label('month'),
+        func.coalesce(func.sum(CustomerComplaint.resolution_cost), 0).label('resolution'),
+        func.coalesce(func.sum(CustomerComplaint.compensation_amount), 0).label('compensation')
+    ).filter(
+        CustomerComplaint.workspace_id == workspace_id,
+        CustomerComplaint.complaint_date >= cutoff_date
+    ).group_by('year', 'month').order_by('year', 'month').all()
+    
+    return {
+        'ca_costs': [
+            {
+                'month': f"{int(row.year)}-{int(row.month):02d}",
+                'estimated': float(row.estimated),
+                'actual': float(row.actual)
+            }
+            for row in ca_trends
+        ],
+        'training_costs': [
+            {
+                'month': f"{int(row.year)}-{int(row.month):02d}",
+                'cost': float(row.cost)
+            }
+            for row in training_trends
+        ],
+        'complaint_costs': [
+            {
+                'month': f"{int(row.year)}-{int(row.month):02d}",
+                'resolution': float(row.resolution),
+                'compensation': float(row.compensation),
+                'total': float(row.resolution + row.compensation)
+            }
+            for row in complaint_trends
+        ]
+    }
+
+
+@router.get("/analytics/budget-tracking")
+def get_budget_tracking(
+    workspace_id: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Compare estimated vs actual costs for budget tracking"""
+    
+    # CA budget tracking
+    ca_budget = db.query(
+        func.coalesce(func.sum(CorrectiveAction.estimated_cost), 0).label('estimated'),
+        func.coalesce(func.sum(CorrectiveAction.actual_cost), 0).label('actual'),
+        func.count(case((CorrectiveAction.actual_cost > CorrectiveAction.estimated_cost, 1))).label('over_budget'),
+        func.count(case((CorrectiveAction.actual_cost <= CorrectiveAction.estimated_cost, 1))).label('on_budget')
+    ).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.estimated_cost.isnot(None),
+        CorrectiveAction.actual_cost.isnot(None)
+    ).first()
+    
+    # Audit budget tracking
+    audit_budget = db.query(
+        func.coalesce(func.sum(InternalAudit.estimated_cost), 0).label('estimated'),
+        func.coalesce(func.sum(InternalAudit.actual_cost), 0).label('actual'),
+        func.count(case((InternalAudit.actual_cost > InternalAudit.estimated_cost, 1))).label('over_budget'),
+        func.count(case((InternalAudit.actual_cost <= InternalAudit.estimated_cost, 1))).label('on_budget')
+    ).filter(
+        InternalAudit.workspace_id == workspace_id,
+        InternalAudit.estimated_cost.isnot(None),
+        InternalAudit.actual_cost.isnot(None)
+    ).first()
+    
+    return {
+        'corrective_actions': {
+            'estimated': float(ca_budget.estimated),
+            'actual': float(ca_budget.actual),
+            'variance': float(ca_budget.actual - ca_budget.estimated),
+            'variance_percent': round((ca_budget.actual - ca_budget.estimated) / ca_budget.estimated * 100, 1) if ca_budget.estimated > 0 else 0,
+            'over_budget_count': ca_budget.over_budget,
+            'on_budget_count': ca_budget.on_budget
+        },
+        'audits': {
+            'estimated': float(audit_budget.estimated),
+            'actual': float(audit_budget.actual),
+            'variance': float(audit_budget.actual - audit_budget.estimated),
+            'variance_percent': round((audit_budget.actual - audit_budget.estimated) / audit_budget.estimated * 100, 1) if audit_budget.estimated > 0 else 0,
+            'over_budget_count': audit_budget.over_budget,
+            'on_budget_count': audit_budget.on_budget
+        },
+        'overall': {
+            'total_estimated': float(ca_budget.estimated + audit_budget.estimated),
+            'total_actual': float(ca_budget.actual + audit_budget.actual),
+            'total_variance': float((ca_budget.actual + audit_budget.actual) - (ca_budget.estimated + audit_budget.estimated))
+        }
+    }
+
+
+@router.get("/analytics/cost-by-category")
+def get_cost_by_category(
+    workspace_id: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get cost breakdown by categories"""
+    
+    # NC costs by category
+    nc_by_category = db.query(
+        NonConformity.category,
+        func.count(NonConformity.id).label('count'),
+        func.coalesce(func.sum(NonConformity.potential_cost), 0).label('cost')
+    ).filter(
+        NonConformity.workspace_id == workspace_id,
+        NonConformity.potential_cost.isnot(None)
+    ).group_by(NonConformity.category).order_by(func.sum(NonConformity.potential_cost).desc()).limit(10).all()
+    
+    # CA costs by type
+    ca_by_type = db.query(
+        CorrectiveAction.action_type,
+        func.count(CorrectiveAction.id).label('count'),
+        func.coalesce(func.sum(CorrectiveAction.actual_cost), 0).label('cost')
+    ).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.actual_cost.isnot(None)
+    ).group_by(CorrectiveAction.action_type).order_by(func.sum(CorrectiveAction.actual_cost).desc()).limit(10).all()
+    
+    # Training costs by type
+    training_by_type = db.query(
+        TrainingRecord.training_type,
+        func.count(TrainingRecord.id).label('count'),
+        func.coalesce(func.sum(TrainingRecord.training_cost), 0).label('cost')
+    ).filter(
+        TrainingRecord.workspace_id == workspace_id,
+        TrainingRecord.training_cost.isnot(None)
+    ).group_by(TrainingRecord.training_type).order_by(func.sum(TrainingRecord.training_cost).desc()).all()
+    
+    return {
+        'nc_by_category': [
+            {
+                'category': row.category or 'Uncategorized',
+                'count': row.count,
+                'cost': float(row.cost)
+            }
+            for row in nc_by_category
+        ],
+        'ca_by_type': [
+            {
+                'type': row.action_type or 'Unspecified',
+                'count': row.count,
+                'cost': float(row.cost)
+            }
+            for row in ca_by_type
+        ],
+        'training_by_type': [
+            {
+                'type': row.training_type or 'Unspecified',
+                'count': row.count,
+                'cost': float(row.cost)
+            }
+            for row in training_by_type
+        ]
+    }
+
+
+@router.get("/analytics/predictions")
+def get_predictions(
+    workspace_id: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get predictive analytics for NC trends, CA completion, and risk scoring"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import extract
+    
+    # NC Trend Forecasting (last 6 months + predict next 3)
+    cutoff_date = datetime.utcnow() - timedelta(days=180)
+    
+    nc_monthly = db.query(
+        extract('year', NonConformity.created_at).label('year'),
+        extract('month', NonConformity.created_at).label('month'),
+        func.count(NonConformity.id).label('count')
+    ).filter(
+        NonConformity.workspace_id == workspace_id,
+        NonConformity.created_at >= cutoff_date
+    ).group_by('year', 'month').order_by('year', 'month').all()
+    
+    # Simple moving average for prediction
+    nc_counts = [row.count for row in nc_monthly]
+    if len(nc_counts) >= 3:
+        avg_trend = sum(nc_counts[-3:]) / 3
+        # Linear trend
+        if len(nc_counts) >= 6:
+            early_avg = sum(nc_counts[:3]) / 3
+            late_avg = sum(nc_counts[-3:]) / 3
+            trend_slope = (late_avg - early_avg) / 3
+        else:
+            trend_slope = 0
+        
+        predictions = []
+        last_month = nc_monthly[-1] if nc_monthly else None
+        if last_month:
+            current_year = int(last_month.year)
+            current_month = int(last_month.month)
+            
+            for i in range(1, 4):
+                next_month = current_month + i
+                next_year = current_year
+                if next_month > 12:
+                    next_month -= 12
+                    next_year += 1
+                
+                predicted_count = max(0, int(avg_trend + (trend_slope * i)))
+                predictions.append({
+                    'month': f"{next_year}-{next_month:02d}",
+                    'predicted_count': predicted_count,
+                    'confidence': 'medium' if len(nc_counts) >= 6 else 'low'
+                })
+    else:
+        predictions = []
+    
+    # CA Completion Predictions
+    pending_ca = db.query(CorrectiveAction).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.status.in_(['Open', 'In Progress']),
+        CorrectiveAction.target_completion_date.isnot(None)
+    ).all()
+    
+    completed_ca = db.query(
+        func.avg(
+            func.julianday(CorrectiveAction.actual_completion_date) - 
+            func.julianday(CorrectiveAction.created_at)
+        )
+    ).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.status == 'Completed',
+        CorrectiveAction.actual_completion_date.isnot(None)
+    ).scalar()
+    
+    avg_completion_days = completed_ca if completed_ca else 30  # Default 30 days
+    
+    ca_predictions = []
+    for ca in pending_ca[:10]:  # Top 10
+        days_since_creation = (datetime.utcnow() - ca.created_at).days
+        progress_ratio = days_since_creation / avg_completion_days if avg_completion_days > 0 else 0
+        
+        if ca.target_completion_date:
+            days_until_target = (ca.target_completion_date - datetime.utcnow().date()).days
+            predicted_completion = datetime.utcnow() + timedelta(days=max(1, avg_completion_days - days_since_creation))
+            
+            ca_predictions.append({
+                'ca_id': ca.id,
+                'ca_number': ca.action_number,
+                'title': ca.action_description[:100] if ca.action_description else 'N/A',
+                'predicted_completion_date': predicted_completion.strftime('%Y-%m-%d'),
+                'target_date': ca.target_completion_date.strftime('%Y-%m-%d'),
+                'on_track': days_until_target > (avg_completion_days - days_since_creation),
+                'progress_percent': min(100, int(progress_ratio * 100))
+            })
+    
+    # Risk Scoring (0-100)
+    open_nc_count = db.query(func.count(NonConformity.id)).filter(
+        NonConformity.workspace_id == workspace_id,
+        NonConformity.status == 'Open'
+    ).scalar() or 0
+    
+    critical_nc = db.query(func.count(NonConformity.id)).filter(
+        NonConformity.workspace_id == workspace_id,
+        NonConformity.status == 'Open',
+        NonConformity.severity == 'Critical'
+    ).scalar() or 0
+    
+    overdue_ca = db.query(func.count(CorrectiveAction.id)).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.status.in_(['Open', 'In Progress']),
+        CorrectiveAction.target_completion_date < datetime.utcnow().date()
+    ).scalar() or 0
+    
+    ineffective_ca = db.query(func.count(CorrectiveAction.id)).filter(
+        CorrectiveAction.workspace_id == workspace_id,
+        CorrectiveAction.effectiveness == 'Not Effective'
+    ).scalar() or 0
+    
+    major_findings = db.query(func.sum(InternalAudit.major_findings)).filter(
+        InternalAudit.workspace_id == workspace_id,
+        InternalAudit.audit_date >= datetime.utcnow() - timedelta(days=365)
+    ).scalar() or 0
+    
+    # Risk calculation (weighted)
+    risk_score = min(100, int(
+        (open_nc_count * 2) +
+        (critical_nc * 10) +
+        (overdue_ca * 5) +
+        (ineffective_ca * 8) +
+        (major_findings * 3)
+    ))
+    
+    risk_level = 'low' if risk_score < 30 else 'medium' if risk_score < 70 else 'high'
+    
+    risk_factors = []
+    if open_nc_count > 5:
+        risk_factors.append(f"{open_nc_count} open non-conformities")
+    if critical_nc > 0:
+        risk_factors.append(f"{critical_nc} critical NC(s)")
+    if overdue_ca > 0:
+        risk_factors.append(f"{overdue_ca} overdue corrective action(s)")
+    if ineffective_ca > 0:
+        risk_factors.append(f"{ineffective_ca} ineffective CA(s)")
+    if major_findings > 3:
+        risk_factors.append(f"{int(major_findings)} major audit findings in last year")
+    
+    return {
+        'nc_forecast': {
+            'historical': [
+                {
+                    'month': f"{int(row.year)}-{int(row.month):02d}",
+                    'count': row.count
+                }
+                for row in nc_monthly
+            ],
+            'predictions': predictions
+        },
+        'ca_predictions': ca_predictions,
+        'risk_assessment': {
+            'score': risk_score,
+            'level': risk_level,
+            'factors': risk_factors,
+            'recommendation': (
+                'Continue current practices' if risk_score < 30 else
+                'Monitor key indicators closely' if risk_score < 70 else
+                'Immediate action required'
+            )
+        }
+    }

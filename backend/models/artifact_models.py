@@ -186,6 +186,11 @@ class InternalAudit(Base):
     observations = Column(Integer, default=0)
     findings_summary = Column(Text)
     
+    # Cost Tracking
+    estimated_cost = Column(Float)  # Estimated audit cost
+    actual_cost = Column(Float)  # Actual audit cost
+    auditor_hours = Column(Float)  # Total auditor hours
+    
     # Documentation
     report_path = Column(String(1000))
     report_issued_date = Column(Date)
@@ -224,6 +229,10 @@ class ManagementReview(Base):
     # Outputs
     decisions = Column(Text)  # JSON array of decisions
     action_items = Column(Text)  # JSON array of action items
+    
+    # Cost Tracking
+    meeting_cost = Column(Float)  # Meeting facility/logistics cost
+    preparation_hours = Column(Float)  # Total preparation hours
     
     # Documentation
     minutes_path = Column(String(1000))
@@ -273,6 +282,12 @@ class TrainingRecord(Base):
     # ISO Reference
     iso_clause_reference = Column(String(50))  # e.g., "7.2 Competence"
     
+    # Cost Tracking
+    training_cost = Column(Float)  # Total training cost
+    instructor_fee = Column(Float)  # Instructor/trainer fee
+    material_cost = Column(Float)  # Training materials cost
+    venue_cost = Column(Float)  # Venue rental cost
+    
     # Notes
     notes = Column(Text)
     trainer_name = Column(String(255))
@@ -318,6 +333,11 @@ class CustomerComplaint(Base):
     customer_notification_date = Column(Date)
     customer_satisfaction = Column(String(50))  # satisfied, neutral, unsatisfied
     customer_feedback = Column(Text)
+    
+    # Cost Tracking
+    resolution_cost = Column(Float)  # Cost to resolve complaint
+    compensation_amount = Column(Float)  # Compensation paid to customer
+    investigation_hours = Column(Float)  # Investigation time
     
     # Assignment
     assigned_to = Column(String(36), ForeignKey("users.id"))
