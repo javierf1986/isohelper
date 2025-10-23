@@ -135,6 +135,16 @@ class ArtifactService:
         
         return query.order_by(NonConformity.created_at.desc()).limit(limit).all()
     
+    @staticmethod
+    def get_nc_by_id(db: Session, nc_id: str, workspace_id: str) -> Optional[NonConformity]:
+        """Get a single NC by ID"""
+        return db.query(NonConformity).filter(
+            and_(
+                NonConformity.id == nc_id,
+                NonConformity.workspace_id == workspace_id
+            )
+        ).first()
+    
     # ===== Corrective Action Management =====
     
     @staticmethod

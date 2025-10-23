@@ -49,6 +49,34 @@ class NCResponse(BaseModel):
         from_attributes = True
 
 
+class NCDetailResponse(BaseModel):
+    id: str
+    nc_number: str
+    title: str
+    description: str
+    severity: str
+    status: str
+    detected_date: date
+    category: Optional[str]
+    detected_location: Optional[str]
+    reported_by: str
+    iso_standard_id: Optional[str]
+    iso_clause_number: Optional[str]
+    root_cause: Optional[str]
+    contributing_factors: Optional[str]
+    immediate_actions: Optional[str]
+    ai_analysis: Optional[str]
+    target_closure_date: Optional[date]
+    actual_closure_date: Optional[date]
+    verified_by: Optional[str]
+    verified_at: Optional[str]
+    created_at: str
+    updated_at: str
+    
+    class Config:
+        from_attributes = True
+
+
 class CACreateRequest(BaseModel):
     title: str
     description: str
@@ -172,6 +200,48 @@ async def list_ncs(
         )
         for nc in ncs
     ]
+
+
+@router.get("/nc/{nc_id}", response_model=NCDetailResponse)
+async def get_nc(
+    nc_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific Non-Conformity by ID"""
+    nc = ArtifactService.get_nc_by_id(
+        db=db,
+        nc_id=nc_id,
+        workspace_id=current_user.workspace_id
+    )
+    
+    if not nc:
+        raise HTTPException(status_code=404, detail="Non-Conformity not found")
+    
+    return NCDetailResponse(
+        id=nc.id,
+        nc_number=nc.nc_number,
+        title=nc.title,
+        description=nc.description,
+        severity=nc.severity.value,
+        status=nc.status.value,
+        detected_date=nc.detected_date,
+        category=nc.category,
+        detected_location=nc.detected_location,
+        reported_by=nc.reported_by,
+        iso_standard_id=nc.iso_standard_id,
+        iso_clause_number=nc.iso_clause_number,
+        root_cause=nc.root_cause,
+        contributing_factors=nc.contributing_factors,
+        immediate_actions=nc.immediate_actions,
+        ai_analysis=nc.ai_analysis,
+        target_closure_date=nc.target_closure_date,
+        actual_closure_date=nc.actual_closure_date,
+        verified_by=nc.verified_by,
+        verified_at=nc.verified_at.isoformat() if nc.verified_at else None,
+        created_at=nc.created_at.isoformat(),
+        updated_at=nc.updated_at.isoformat()
+    )
 
 
 @router.put("/nc/{nc_id}/status")
