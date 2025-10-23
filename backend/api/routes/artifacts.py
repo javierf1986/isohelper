@@ -155,6 +155,95 @@ class AuditResponse(BaseModel):
         from_attributes = True
 
 
+class AuditDetailResponse(BaseModel):
+    id: str
+    audit_number: str
+    title: str
+    audit_type: str
+    status: str
+    scope_description: str
+    planned_date: date
+    actual_date: Optional[date]
+    lead_auditor: str
+    team_members: Optional[str]
+    major_findings: int
+    minor_findings: int
+    observations: int
+    findings_summary: Optional[str]
+    recommendations: Optional[str]
+    follow_up_required: bool
+    iso_standard_id: Optional[str]
+    created_at: str
+    updated_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+class ManagementReviewDetailResponse(BaseModel):
+    id: str
+    review_number: str
+    review_date: date
+    attendees: Optional[str]
+    agenda: Optional[str]
+    minutes: Optional[str]
+    decisions: Optional[str]
+    action_items: Optional[str]
+    next_review_date: Optional[date]
+    created_at: str
+    updated_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+class TrainingRecordDetailResponse(BaseModel):
+    id: str
+    record_number: str
+    employee_id: str
+    training_title: str
+    training_date: date
+    trainer_name: Optional[str]
+    training_hours: Optional[float]
+    training_type: Optional[str]
+    competency_area: Optional[str]
+    passed: bool
+    score: Optional[int]
+    certificate_number: Optional[str]
+    expiry_date: Optional[date]
+    notes: Optional[str]
+    created_at: str
+    updated_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+class CustomerComplaintDetailResponse(BaseModel):
+    id: str
+    complaint_number: str
+    complaint_title: str
+    complaint_description: str
+    customer_name: str
+    received_date: date
+    complaint_source: str
+    product_service: Optional[str]
+    status: str
+    priority: str
+    assigned_to: Optional[str]
+    root_cause: Optional[str]
+    resolution: Optional[str]
+    resolution_date: Optional[date]
+    resolution_target_date: Optional[date]
+    customer_feedback: Optional[str]
+    preventive_measures: Optional[str]
+    created_at: str
+    updated_at: str
+    
+    class Config:
+        from_attributes = True
+
+
 # ===== Non-Conformity Endpoints =====
 
 @router.post("/nc", response_model=NCResponse, status_code=status.HTTP_201_CREATED)
@@ -580,6 +669,45 @@ async def list_audits(
     ]
 
 
+@router.get("/audit/{audit_id}", response_model=AuditDetailResponse)
+async def get_audit(
+    audit_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific Internal Audit by ID"""
+    audit = ArtifactService.get_audit_by_id(
+        db=db,
+        audit_id=audit_id,
+        workspace_id=current_user.workspace_id
+    )
+    
+    if not audit:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    
+    return AuditDetailResponse(
+        id=audit.id,
+        audit_number=audit.audit_number,
+        title=audit.title,
+        audit_type=audit.audit_type.value,
+        status=audit.status.value,
+        scope_description=audit.scope_description,
+        planned_date=audit.planned_date,
+        actual_date=audit.actual_date,
+        lead_auditor=audit.lead_auditor,
+        team_members=audit.team_members,
+        major_findings=audit.major_findings,
+        minor_findings=audit.minor_findings,
+        observations=audit.observations,
+        findings_summary=audit.findings_summary,
+        recommendations=audit.recommendations,
+        follow_up_required=audit.follow_up_required,
+        iso_standard_id=audit.iso_standard_id,
+        created_at=audit.created_at.isoformat(),
+        updated_at=audit.updated_at.isoformat()
+    )
+
+
 # ===== Analytics Endpoints =====
 
 @router.get("/analytics/nc-statistics")
@@ -696,6 +824,37 @@ async def list_management_reviews(
     return reviews
 
 
+@router.get("/management-review/{review_id}", response_model=ManagementReviewDetailResponse)
+async def get_management_review(
+    review_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific Management Review by ID"""
+    review = ArtifactService.get_review_by_id(
+        db=db,
+        review_id=review_id,
+        workspace_id=current_user.workspace_id
+    )
+    
+    if not review:
+        raise HTTPException(status_code=404, detail="Management Review not found")
+    
+    return ManagementReviewDetailResponse(
+        id=review.id,
+        review_number=review.review_number,
+        review_date=review.review_date,
+        attendees=review.attendees,
+        agenda=review.agenda,
+        minutes=review.minutes,
+        decisions=review.decisions,
+        action_items=review.action_items,
+        next_review_date=review.next_review_date,
+        created_at=review.created_at.isoformat(),
+        updated_at=review.updated_at.isoformat()
+    )
+
+
 # ===== Training Record Endpoints =====
 
 class TrainingRecordCreateRequest(BaseModel):
@@ -780,6 +939,42 @@ async def list_training_records(
     return records
 
 
+@router.get("/training/{training_id}", response_model=TrainingRecordDetailResponse)
+async def get_training_record(
+    training_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific Training Record by ID"""
+    training = ArtifactService.get_training_by_id(
+        db=db,
+        training_id=training_id,
+        workspace_id=current_user.workspace_id
+    )
+    
+    if not training:
+        raise HTTPException(status_code=404, detail="Training Record not found")
+    
+    return TrainingRecordDetailResponse(
+        id=training.id,
+        record_number=training.record_number,
+        employee_id=training.employee_id,
+        training_title=training.training_title,
+        training_date=training.training_date,
+        trainer_name=training.trainer_name,
+        training_hours=training.training_hours,
+        training_type=training.training_type,
+        competency_area=training.competency_area,
+        passed=training.passed,
+        score=training.score,
+        certificate_number=training.certificate_number,
+        expiry_date=training.expiry_date,
+        notes=training.notes,
+        created_at=training.created_at.isoformat(),
+        updated_at=training.updated_at.isoformat()
+    )
+
+
 # ===== Customer Complaint Endpoints =====
 
 class CustomerComplaintCreateRequest(BaseModel):
@@ -857,3 +1052,42 @@ async def list_customer_complaints(
         limit=limit
     )
     return complaints
+
+
+@router.get("/complaint/{complaint_id}", response_model=CustomerComplaintDetailResponse)
+async def get_customer_complaint(
+    complaint_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific Customer Complaint by ID"""
+    complaint = ArtifactService.get_complaint_by_id(
+        db=db,
+        complaint_id=complaint_id,
+        workspace_id=current_user.workspace_id
+    )
+    
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Customer Complaint not found")
+    
+    return CustomerComplaintDetailResponse(
+        id=complaint.id,
+        complaint_number=complaint.complaint_number,
+        complaint_title=complaint.complaint_title,
+        complaint_description=complaint.complaint_description,
+        customer_name=complaint.customer_name,
+        received_date=complaint.received_date,
+        complaint_source=complaint.complaint_source,
+        product_service=complaint.product_service,
+        status=complaint.status,
+        priority=complaint.priority,
+        assigned_to=complaint.assigned_to,
+        root_cause=complaint.root_cause,
+        resolution=complaint.resolution,
+        resolution_date=complaint.resolution_date,
+        resolution_target_date=complaint.resolution_target_date,
+        customer_feedback=complaint.customer_feedback,
+        preventive_measures=complaint.preventive_measures,
+        created_at=complaint.created_at.isoformat(),
+        updated_at=complaint.updated_at.isoformat()
+    )

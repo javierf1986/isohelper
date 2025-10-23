@@ -356,6 +356,48 @@ class ArtifactService:
         
         return query.order_by(InternalAudit.planned_date.desc()).limit(limit).all()
     
+    @staticmethod
+    def get_audit_by_id(db: Session, audit_id: str, workspace_id: str) -> Optional[InternalAudit]:
+        """Get a single audit by ID"""
+        return db.query(InternalAudit).filter(
+            and_(
+                InternalAudit.id == audit_id,
+                InternalAudit.workspace_id == workspace_id
+            )
+        ).first()
+    
+    # ===== Management Review Methods =====
+    
+    @staticmethod
+    def get_review_by_id(db: Session, review_id: str, workspace_id: str) -> Optional[ManagementReview]:
+        """Get a single management review by ID"""
+        return db.query(ManagementReview).filter(
+            and_(
+                ManagementReview.id == review_id,
+                ManagementReview.workspace_id == workspace_id
+            )
+        ).first()
+    
+    @staticmethod
+    def get_training_by_id(db: Session, training_id: str, workspace_id: str) -> Optional[TrainingRecord]:
+        """Get a single training record by ID"""
+        return db.query(TrainingRecord).filter(
+            and_(
+                TrainingRecord.id == training_id,
+                TrainingRecord.workspace_id == workspace_id
+            )
+        ).first()
+    
+    @staticmethod
+    def get_complaint_by_id(db: Session, complaint_id: str, workspace_id: str) -> Optional[CustomerComplaint]:
+        """Get a single customer complaint by ID"""
+        return db.query(CustomerComplaint).filter(
+            and_(
+                CustomerComplaint.id == complaint_id,
+                CustomerComplaint.workspace_id == workspace_id
+            )
+        ).first()
+    
     # ===== Analytics & Reporting =====
     
     @staticmethod
