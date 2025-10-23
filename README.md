@@ -41,20 +41,21 @@ Transform compliance documentation from a burden into an intelligent, automated 
 
 **Phase 4: Advanced Features** 🚧 **72% Complete**
 
-**4.1 Multi-Language Support** ✅ **80% Complete**
+**4.1 Multi-Language Support** ✅ **100% COMPLETE** 🎉
 - ✅ Backend translation service with 4 models (Language, Translation, TranslationKey, UserLanguagePreference)
 - ✅ API endpoints for language management
 - ✅ next-intl integration with 5 locales (EN, ES, FR, DE, ZH)
-- ✅ 150+ translation keys across 3 languages
-- ✅ LanguageSelector component with flags
-- ⏳ App router integration pending
+- ✅ 150+ translation keys across 8 namespaces
+- ✅ LanguageSelector component with flags in dashboard
+- ✅ Full app router integration with middleware
 
-**4.2 Document Versioning** ✅ **50% Complete**
+**4.2 Document Versioning** ✅ **80% Complete**
 - ✅ Version control system (DocumentVersion, ApprovalWorkflow, AuditLog, ChangeRequest)
 - ✅ SHA-256 content hashing for integrity
 - ✅ JSON diff storage for change tracking
 - ✅ Multi-step approval workflow
-- ✅ Complete audit trail
+- ✅ Complete audit trail with rollback support
+- ✅ **8 REST API endpoints** (create, list, get, compare, approve, reject, rollback, audit trail) ⭐ NEW
 - ⏳ Frontend UI pending
 
 **4.3 Artifact Management System** ✅ **100% COMPLETE** 🎉
@@ -89,14 +90,25 @@ Transform compliance documentation from a burden into an intelligent, automated 
 
 ### 📅 What's New in Latest Release
 
-**Phase 4.3: Complete Artifact Management System** ✅ **100% COMPLETE** (October 23, 2025)
+**Phase 4.1-4.2: Infrastructure Enhancements** ✅ **90% COMPLETE** (October 23, 2025)
 
-**NEW: Complete CRUD with Delete Functionality** ⭐
-- ✨ **6 Delete Service Methods**: Backend delete operations with workspace filtering
-- ✨ **6 DELETE Endpoints**: REST API delete endpoints for all artifact types
-- ✨ **6 Delete Buttons**: Confirmation dialogs on detail pages with user feedback
-- ✨ **Security**: Workspace-scoped deletion prevents cross-tenant data removal
-- ✨ **Error Handling**: 404 responses for missing artifacts, success messages on completion
+**NEW: Document Versioning API** ⭐
+- ✨ **8 REST API Endpoints**: Create, list, get, compare, approve, reject, rollback, audit trail
+- ✨ **Content Integrity**: SHA-256 hashing for version verification
+- ✨ **Diff Tracking**: JSON diff storage with line-by-line change tracking
+- ✨ **Approval Workflow**: Multi-step approval process with status management
+- ✨ **Audit Trail**: Complete logging of all version actions with actor tracking
+- ✨ **Rollback Support**: Restore previous versions while preserving full history
+
+**Multi-Language Support (i18n)** 🌐
+- ✨ **Complete Integration**: next-intl middleware with 5 locales (EN, ES, FR, DE, ZH)
+- ✨ **LanguageSelector Component**: Flag emojis and dropdown in dashboard
+- ✨ **150+ Translation Keys**: 8 namespaces covering entire application
+- ✨ **Locale Detection**: Automatic browser language detection
+
+**Phase 4.3: Complete Artifact Management System** ✅ **100% COMPLETE**
+- ✨ **Full CRUD Operations**: Create, Read, Update, Delete for all 6 artifact types
+- ✨ **53 API Endpoints**: Complete REST API with filtering, sorting, and analytics
 
 **Full CRUD Artifact Management:**
 - ✨ **6 Edit Forms**: Complete edit capability for NC, CA, Audit, Review, Training, Complaint
@@ -120,8 +132,8 @@ Transform compliance documentation from a burden into an intelligent, automated 
 - ✨ **Backend API**: 53 endpoints (35 list + 6 detail + 6 update + 6 delete) with filtering, sorting, and analytics
 
 **Phase 4.1-4.2: Infrastructure** 
-- 🌐 Multi-language support (5 locales with next-intl)
-- 📋 Document versioning with approval workflows
+- ✅ Multi-language support (5 locales with next-intl, LanguageSelector, middleware routing) **100% COMPLETE**
+- ✅ Document versioning with approval workflows (8 API endpoints, SHA-256 hashing, rollback) **80% COMPLETE**
 - 🔍 Audit logging and change tracking
 - 🔒 SHA-256 content hashing
 
@@ -208,8 +220,9 @@ isohelper/
 │   │       ├── documents.py     # ✅ Document generation
 │   │       ├── templates.py     # ✅ Template management
 │   │       ├── export.py        # ✅ PDF/DOCX/HTML export
-│   │       ├── artifacts.py     # ✅ Artifact management (47+ endpoints)
+│   │       ├── artifacts.py     # ✅ Artifact management (53 endpoints)
 │   │       ├── languages.py     # ✅ Multi-language support
+│   │       ├── versions.py      # ✅ Document versioning (8 endpoints) ⭐ NEW
 │   │       └── compliance.py    # ✅ Compliance checking
 │   ├── services/
 │   │   ├── auth_service.py      # ✅ JWT authentication
@@ -217,13 +230,13 @@ isohelper/
 │   │   ├── export_service.py    # ✅ Export with custom branding
 │   │   ├── artifact_service.py  # ✅ Artifact CRUD and analytics
 │   │   ├── translation_service.py # ✅ Multi-language translation
-│   │   └── versioning_service.py # ✅ Document version control
+│   │   └── version_service.py   # ✅ Document version control ⭐ NEW
 │   ├── models/                  # SQLAlchemy models
 │   │   ├── user.py              # ✅ User and authentication
 │   │   ├── iso_models.py        # ✅ Documents, templates, workspaces
 │   │   ├── artifact_models.py   # ✅ NC, CA, Audit, Review, Training, Complaint
 │   │   ├── language_models.py   # ✅ Translations and preferences
-│   │   └── versioning_models.py # ✅ Versions, approvals, audit log
+│   │   └── version_models.py    # ✅ Versions, approvals, audit log ⭐ NEW
 │   ├── database/
 │   │   ├── database.py          # Database initialization
 │   │   └── session.py           # Session management
