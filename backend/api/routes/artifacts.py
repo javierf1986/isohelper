@@ -300,6 +300,39 @@ async def verify_ca_effectiveness(
         raise HTTPException(status_code=404, detail=str(e))
 
 
+@router.get("/ca", response_model=List[CAResponse])
+async def list_cas(
+    status: Optional[CAStatus] = None,
+    priority: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List Corrective Actions with filters"""
+    cas = ArtifactService.get_workspace_cas(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        status=status,
+        priority=priority,
+        limit=limit
+    )
+    
+    return [
+        CAResponse(
+            id=ca.id,
+            ca_number=ca.ca_number,
+            title=ca.title,
+            description=ca.description,
+            status=ca.status.value,
+            priority=ca.priority,
+            assigned_to=ca.assigned_to,
+            planned_completion_date=ca.planned_completion_date,
+            nc_id=ca.nc_id,
+            created_at=ca.created_at.isoformat()
+        ) for ca in cas
+    ]
+
+
 # ===== Internal Audit Endpoints =====
 
 @router.post("/audit", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
@@ -366,6 +399,39 @@ async def complete_audit(
         }
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/audit", response_model=List[AuditResponse])
+async def list_audits(
+    status: Optional[AuditStatus] = None,
+    audit_type: Optional[AuditType] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List Internal Audits with filters"""
+    audits = ArtifactService.get_workspace_audits(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        status=status,
+        audit_type=audit_type,
+        limit=limit
+    )
+    
+    return [
+        AuditResponse(
+            id=audit.id,
+            audit_number=audit.audit_number,
+            title=audit.title,
+            audit_type=audit.audit_type.value,
+            status=audit.status.value,
+            planned_date=audit.planned_date,
+            lead_auditor=audit.lead_auditor,
+            major_findings=audit.major_findings,
+            minor_findings=audit.minor_findings,
+            created_at=audit.created_at.isoformat()
+        ) for audit in audits
+    ]
 
 
 # ===== Analytics Endpoints =====

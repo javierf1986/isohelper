@@ -13,6 +13,7 @@ import uuid
 from backend.models.artifact_models import (
     NonConformity, CorrectiveAction, InternalAudit,
     ManagementReview, TrainingRecord, CustomerComplaint,
+    AuditType, AuditStatus,
     NCStatus, NCSeverity, CAStatus, AuditStatus
 )
 
@@ -225,6 +226,27 @@ class ArtifactService:
         
         return ca
     
+    @staticmethod
+    def get_workspace_cas(
+        db: Session,
+        workspace_id: str,
+        status: Optional[CAStatus] = None,
+        priority: Optional[str] = None,
+        limit: int = 100
+    ) -> List[CorrectiveAction]:
+        """Get CAs for a workspace with optional filters"""
+        query = db.query(CorrectiveAction).filter(
+            CorrectiveAction.workspace_id == workspace_id
+        )
+        
+        if status:
+            query = query.filter(CorrectiveAction.status == status)
+        
+        if priority:
+            query = query.filter(CorrectiveAction.priority == priority)
+        
+        return query.order_by(CorrectiveAction.created_at.desc()).limit(limit).all()
+    
     # ===== Internal Audit Management =====
     
     @staticmethod
@@ -292,6 +314,27 @@ class ArtifactService:
         db.refresh(audit)
         
         return audit
+    
+    @staticmethod
+    def get_workspace_audits(
+        db: Session,
+        workspace_id: str,
+        status: Optional[AuditStatus] = None,
+        audit_type: Optional[AuditType] = None,
+        limit: int = 100
+    ) -> List[InternalAudit]:
+        """Get audits for a workspace with optional filters"""
+        query = db.query(InternalAudit).filter(
+            InternalAudit.workspace_id == workspace_id
+        )
+        
+        if status:
+            query = query.filter(InternalAudit.status == status)
+        
+        if audit_type:
+            query = query.filter(InternalAudit.audit_type == audit_type)
+        
+        return query.order_by(InternalAudit.planned_date.desc()).limit(limit).all()
     
     # ===== Analytics & Reporting =====
     
