@@ -247,6 +247,10 @@ class Workspace(Base):
     standards = relationship("ISOStandard", secondary=workspace_standards, back_populates="workspaces")
     documents = relationship("GeneratedDocument", back_populates="workspace")
     owner = relationship("User", back_populates="workspaces")
+    document_versions = relationship("DocumentVersion", back_populates="workspace")
+    approval_workflows = relationship("ApprovalWorkflow", back_populates="workspace")
+    audit_logs = relationship("AuditLog", back_populates="workspace")
+    change_requests = relationship("ChangeRequest", back_populates="workspace")
     
     def __repr__(self):
         return f"<Workspace {self.client_name}>"
