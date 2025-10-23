@@ -18,8 +18,7 @@ from config.settings import settings
 # Password hashing context with automatic truncation for bcrypt's 72-byte limit
 pwd_context = CryptContext(
     schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__truncate_error=False  # Auto-truncate passwords longer than 72 bytes
+    deprecated="auto"
 )
 
 
@@ -71,8 +70,20 @@ class AuthService:
         Returns:
             Hashed password string
         """
-        # Passlib's bcrypt is configured to auto-truncate at 72 bytes
-        return pwd_context.hash(password)
+        # Manually truncate password to 72 bytes for bcrypt compatibility
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            # Truncate to 72 bytes
+            password = password_bytes[:72].decode('utf-8', errors='ignore')
+        
+        try:
+            return pwd_context.hash(password)
+        except ValueError as e:
+            # If bcrypt still complains about password length, force truncate
+            if "72 bytes" in str(e):
+                password = password[:72]
+                return pwd_context.hash(password)
+            raise
     
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:

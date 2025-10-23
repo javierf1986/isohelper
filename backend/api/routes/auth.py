@@ -30,7 +30,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 class RegisterRequest(BaseModel):
     """User registration request"""
     email: str = Field(..., description="User email address")
-    password: str = Field(..., min_length=8, description="Password (min 8 characters)")
+    password: str = Field(..., min_length=8, max_length=72, description="Password (8-72 characters)")
     full_name: Optional[str] = Field(None, description="User's full name")
     
     class Config:
@@ -129,15 +129,10 @@ async def register(
     Returns user profile without password.
     """
     try:
-        # Truncate password to 72 bytes for bcrypt compatibility
-        password = request.password
-        if len(password.encode('utf-8')) > 72:
-            password = password[:72]
-        
         user = AuthService.create_user(
             db=db,
             email=request.email,
-            password=password,
+            password=request.password,
             full_name=request.full_name,
             role=UserRole.USER  # Default role
         )
