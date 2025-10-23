@@ -94,6 +94,34 @@ class ArtifactService:
         return nc
     
     @staticmethod
+    def update_nc(
+        db: Session,
+        nc_id: str,
+        workspace_id: str,
+        **kwargs
+    ) -> NonConformity:
+        """Update NC with provided fields"""
+        nc = db.query(NonConformity).filter(
+            and_(
+                NonConformity.id == nc_id,
+                NonConformity.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not nc:
+            raise ValueError(f"NC {nc_id} not found")
+        
+        # Update only provided fields
+        for key, value in kwargs.items():
+            if value is not None and hasattr(nc, key):
+                setattr(nc, key, value)
+        
+        db.commit()
+        db.refresh(nc)
+        
+        return nc
+    
+    @staticmethod
     def add_root_cause(
         db: Session,
         nc_id: str,
@@ -184,6 +212,34 @@ class ArtifactService:
         )
         
         db.add(ca)
+        db.commit()
+        db.refresh(ca)
+        
+        return ca
+    
+    @staticmethod
+    def update_ca(
+        db: Session,
+        ca_id: str,
+        workspace_id: str,
+        **kwargs
+    ) -> CorrectiveAction:
+        """Update CA with provided fields"""
+        ca = db.query(CorrectiveAction).filter(
+            and_(
+                CorrectiveAction.id == ca_id,
+                CorrectiveAction.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not ca:
+            raise ValueError(f"CA {ca_id} not found")
+        
+        # Update only provided fields
+        for key, value in kwargs.items():
+            if value is not None and hasattr(ca, key):
+                setattr(ca, key, value)
+        
         db.commit()
         db.refresh(ca)
         
@@ -303,6 +359,34 @@ class ArtifactService:
         )
         
         db.add(audit)
+        db.commit()
+        db.refresh(audit)
+        
+        return audit
+    
+    @staticmethod
+    def update_audit(
+        db: Session,
+        audit_id: str,
+        workspace_id: str,
+        **kwargs
+    ) -> InternalAudit:
+        """Update audit with provided fields"""
+        audit = db.query(InternalAudit).filter(
+            and_(
+                InternalAudit.id == audit_id,
+                InternalAudit.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not audit:
+            raise ValueError(f"Audit {audit_id} not found")
+        
+        # Update only provided fields
+        for key, value in kwargs.items():
+            if value is not None and hasattr(audit, key):
+                setattr(audit, key, value)
+        
         db.commit()
         db.refresh(audit)
         
@@ -549,6 +633,34 @@ class ArtifactService:
         return review
     
     @staticmethod
+    def update_management_review(
+        db: Session,
+        review_id: str,
+        workspace_id: str,
+        **kwargs
+    ) -> ManagementReview:
+        """Update management review with provided fields"""
+        review = db.query(ManagementReview).filter(
+            and_(
+                ManagementReview.id == review_id,
+                ManagementReview.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not review:
+            raise ValueError(f"Management Review {review_id} not found")
+        
+        # Update only provided fields
+        for key, value in kwargs.items():
+            if value is not None and hasattr(review, key):
+                setattr(review, key, value)
+        
+        db.commit()
+        db.refresh(review)
+        
+        return review
+    
+    @staticmethod
     def get_workspace_reviews(
         db: Session,
         workspace_id: str,
@@ -609,6 +721,34 @@ class ArtifactService:
         db.commit()
         db.refresh(record)
         return record
+    
+    @staticmethod
+    def update_training_record(
+        db: Session,
+        training_id: str,
+        workspace_id: str,
+        **kwargs
+    ) -> TrainingRecord:
+        """Update training record with provided fields"""
+        training = db.query(TrainingRecord).filter(
+            and_(
+                TrainingRecord.id == training_id,
+                TrainingRecord.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not training:
+            raise ValueError(f"Training Record {training_id} not found")
+        
+        # Update only provided fields
+        for key, value in kwargs.items():
+            if value is not None and hasattr(training, key):
+                setattr(training, key, value)
+        
+        db.commit()
+        db.refresh(training)
+        
+        return training
     
     @staticmethod
     def get_workspace_training(
@@ -693,6 +833,34 @@ class ArtifactService:
         db.add(complaint)
         db.commit()
         db.refresh(complaint)
+        return complaint
+    
+    @staticmethod
+    def update_customer_complaint(
+        db: Session,
+        complaint_id: str,
+        workspace_id: str,
+        **kwargs
+    ) -> CustomerComplaint:
+        """Update customer complaint with provided fields"""
+        complaint = db.query(CustomerComplaint).filter(
+            and_(
+                CustomerComplaint.id == complaint_id,
+                CustomerComplaint.workspace_id == workspace_id
+            )
+        ).first()
+        
+        if not complaint:
+            raise ValueError(f"Customer Complaint {complaint_id} not found")
+        
+        # Update only provided fields
+        for key, value in kwargs.items():
+            if value is not None and hasattr(complaint, key):
+                setattr(complaint, key, value)
+        
+        db.commit()
+        db.refresh(complaint)
+        
         return complaint
     
     @staticmethod

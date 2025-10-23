@@ -33,6 +33,19 @@ class NCCreateRequest(BaseModel):
     iso_clause_number: Optional[str] = None
 
 
+class NCUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    severity: Optional[NCSeverity] = None
+    detected_date: Optional[date] = None
+    category: Optional[str] = None
+    detected_location: Optional[str] = None
+    iso_standard_id: Optional[str] = None
+    iso_clause_number: Optional[str] = None
+    immediate_actions: Optional[str] = None
+    target_closure_date: Optional[date] = None
+
+
 class NCResponse(BaseModel):
     id: str
     nc_number: str
@@ -88,6 +101,17 @@ class CACreateRequest(BaseModel):
     priority: str = "medium"
 
 
+class CAUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    action_plan: Optional[str] = None
+    assigned_to: Optional[str] = None
+    planned_start_date: Optional[date] = None
+    planned_completion_date: Optional[date] = None
+    nc_id: Optional[str] = None
+    priority: Optional[str] = None
+
+
 class CAResponse(BaseModel):
     id: str
     ca_number: str
@@ -136,6 +160,14 @@ class AuditCreateRequest(BaseModel):
     audit_type: AuditType
     scope_description: str
     planned_date: date
+    iso_standard_id: Optional[str] = None
+
+
+class AuditUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    audit_type: Optional[AuditType] = None
+    scope_description: Optional[str] = None
+    planned_date: Optional[date] = None
     iso_standard_id: Optional[str] = None
 
 
@@ -360,6 +392,73 @@ async def get_nc(
     )
 
 
+@router.put("/nc/{nc_id}", response_model=NCDetailResponse)
+async def update_nc(
+    nc_id: str,
+    request: NCUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a Non-Conformity"""
+    try:
+        # Build update dict from request
+        update_data = {}
+        if request.title is not None:
+            update_data['title'] = request.title
+        if request.description is not None:
+            update_data['description'] = request.description
+        if request.severity is not None:
+            update_data['severity'] = request.severity
+        if request.detected_date is not None:
+            update_data['detected_date'] = request.detected_date
+        if request.category is not None:
+            update_data['category'] = request.category
+        if request.detected_location is not None:
+            update_data['detected_location'] = request.detected_location
+        if request.iso_standard_id is not None:
+            update_data['iso_standard_id'] = request.iso_standard_id
+        if request.iso_clause_number is not None:
+            update_data['iso_clause_number'] = request.iso_clause_number
+        if request.immediate_actions is not None:
+            update_data['immediate_actions'] = request.immediate_actions
+        if request.target_closure_date is not None:
+            update_data['target_closure_date'] = request.target_closure_date
+        
+        nc = ArtifactService.update_nc(
+            db=db,
+            nc_id=nc_id,
+            workspace_id=current_user.workspace_id,
+            **update_data
+        )
+        
+        return NCDetailResponse(
+            id=nc.id,
+            nc_number=nc.nc_number,
+            title=nc.title,
+            description=nc.description,
+            severity=nc.severity.value,
+            status=nc.status.value,
+            detected_date=nc.detected_date,
+            category=nc.category,
+            detected_location=nc.detected_location,
+            reported_by=nc.reported_by,
+            iso_standard_id=nc.iso_standard_id,
+            iso_clause_number=nc.iso_clause_number,
+            root_cause=nc.root_cause,
+            contributing_factors=nc.contributing_factors,
+            immediate_actions=nc.immediate_actions,
+            ai_analysis=nc.ai_analysis,
+            target_closure_date=nc.target_closure_date,
+            actual_closure_date=nc.actual_closure_date,
+            verified_by=nc.verified_by,
+            verified_at=nc.verified_at.isoformat() if nc.verified_at else None,
+            created_at=nc.created_at.isoformat(),
+            updated_at=nc.updated_at.isoformat()
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 @router.put("/nc/{nc_id}/status")
 async def update_nc_status(
     nc_id: str,
@@ -568,6 +667,76 @@ async def get_ca(
     )
 
 
+@router.put("/ca/{ca_id}", response_model=CADetailResponse)
+async def update_ca(
+    ca_id: str,
+    request: CAUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a Corrective Action"""
+    # Build update dict from request
+    update_data = {}
+    if request.title is not None:
+        update_data['title'] = request.title
+    if request.description is not None:
+        update_data['description'] = request.description
+    if request.action_plan is not None:
+        update_data['action_plan'] = request.action_plan
+    if request.assigned_to is not None:
+        update_data['assigned_to'] = request.assigned_to
+    if request.planned_start_date is not None:
+        update_data['planned_start_date'] = request.planned_start_date
+    if request.planned_completion_date is not None:
+        update_data['planned_completion_date'] = request.planned_completion_date
+    if request.nc_id is not None:
+        update_data['nc_id'] = request.nc_id
+    if request.priority is not None:
+        update_data['priority'] = request.priority
+    
+    try:
+        ca = ArtifactService.update_ca(
+            db=db,
+            ca_id=ca_id,
+            workspace_id=current_user.workspace_id,
+            **update_data
+        )
+        
+        # Get NC number if linked
+        nc_number = None
+        if ca.nc_id:
+            from backend.models.artifact_models import NonConformity
+            nc = db.query(NonConformity).filter(NonConformity.id == ca.nc_id).first()
+            if nc:
+                nc_number = nc.nc_number
+        
+        return CADetailResponse(
+            id=ca.id,
+            ca_number=ca.ca_number,
+            title=ca.title,
+            description=ca.description,
+            action_plan=ca.action_plan,
+            status=ca.status.value,
+            priority=ca.priority,
+            assigned_to=ca.assigned_to,
+            nc_id=ca.nc_id,
+            nc_number=nc_number,
+            planned_start_date=ca.planned_start_date,
+            planned_completion_date=ca.planned_completion_date,
+            actual_start_date=ca.actual_start_date,
+            actual_completion_date=ca.actual_completion_date,
+            progress_updates=ca.progress_updates,
+            resources_required=ca.resources_required,
+            is_effective=ca.is_effective,
+            effectiveness_results=ca.effectiveness_results,
+            effectiveness_check_date=ca.effectiveness_check_date,
+            created_at=ca.created_at.isoformat(),
+            updated_at=ca.updated_at.isoformat()
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ===== Internal Audit Endpoints =====
 
 @router.post("/audit", response_model=AuditResponse, status_code=status.HTTP_201_CREATED)
@@ -708,6 +877,60 @@ async def get_audit(
     )
 
 
+@router.put("/audit/{audit_id}", response_model=AuditDetailResponse)
+async def update_audit(
+    audit_id: str,
+    request: AuditUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update an Internal Audit"""
+    # Build update dict from request
+    update_data = {}
+    if request.title is not None:
+        update_data['title'] = request.title
+    if request.audit_type is not None:
+        update_data['audit_type'] = request.audit_type
+    if request.scope_description is not None:
+        update_data['scope_description'] = request.scope_description
+    if request.planned_date is not None:
+        update_data['planned_date'] = request.planned_date
+    if request.iso_standard_id is not None:
+        update_data['iso_standard_id'] = request.iso_standard_id
+    
+    try:
+        audit = ArtifactService.update_audit(
+            db=db,
+            audit_id=audit_id,
+            workspace_id=current_user.workspace_id,
+            **update_data
+        )
+        
+        return AuditDetailResponse(
+            id=audit.id,
+            audit_number=audit.audit_number,
+            title=audit.title,
+            audit_type=audit.audit_type.value,
+            status=audit.status.value,
+            scope_description=audit.scope_description,
+            planned_date=audit.planned_date,
+            actual_date=audit.actual_date,
+            lead_auditor=audit.lead_auditor,
+            team_members=audit.team_members,
+            major_findings=audit.major_findings,
+            minor_findings=audit.minor_findings,
+            observations=audit.observations,
+            findings_summary=audit.findings_summary,
+            recommendations=audit.recommendations,
+            follow_up_required=audit.follow_up_required,
+            iso_standard_id=audit.iso_standard_id,
+            created_at=audit.created_at.isoformat(),
+            updated_at=audit.updated_at.isoformat()
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ===== Analytics Endpoints =====
 
 @router.get("/analytics/nc-statistics")
@@ -759,6 +982,16 @@ async def get_audit_summary(
 
 class ManagementReviewCreateRequest(BaseModel):
     review_date: date
+    attendees: Optional[str] = None
+    agenda: Optional[str] = None
+    minutes: Optional[str] = None
+    decisions: Optional[str] = None
+    action_items: Optional[str] = None
+    next_review_date: Optional[date] = None
+
+
+class ManagementReviewUpdateRequest(BaseModel):
+    review_date: Optional[date] = None
     attendees: Optional[str] = None
     agenda: Optional[str] = None
     minutes: Optional[str] = None
@@ -855,12 +1088,77 @@ async def get_management_review(
     )
 
 
+@router.put("/management-review/{review_id}", response_model=ManagementReviewDetailResponse)
+async def update_management_review(
+    review_id: str,
+    request: ManagementReviewUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a Management Review"""
+    # Build update dict from request
+    update_data = {}
+    if request.review_date is not None:
+        update_data['review_date'] = request.review_date
+    if request.attendees is not None:
+        update_data['attendees'] = request.attendees
+    if request.agenda is not None:
+        update_data['agenda'] = request.agenda
+    if request.minutes is not None:
+        update_data['minutes'] = request.minutes
+    if request.decisions is not None:
+        update_data['decisions'] = request.decisions
+    if request.action_items is not None:
+        update_data['action_items'] = request.action_items
+    if request.next_review_date is not None:
+        update_data['next_review_date'] = request.next_review_date
+    
+    try:
+        review = ArtifactService.update_management_review(
+            db=db,
+            review_id=review_id,
+            workspace_id=current_user.workspace_id,
+            **update_data
+        )
+        
+        return ManagementReviewDetailResponse(
+            id=review.id,
+            review_number=review.review_number,
+            review_date=review.review_date,
+            attendees=review.attendees,
+            agenda=review.agenda,
+            minutes=review.minutes,
+            decisions=review.decisions,
+            action_items=review.action_items,
+            next_review_date=review.next_review_date,
+            created_at=review.created_at.isoformat(),
+            updated_at=review.updated_at.isoformat()
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ===== Training Record Endpoints =====
 
 class TrainingRecordCreateRequest(BaseModel):
     employee_id: str
     training_title: str
     training_date: date
+    trainer_name: Optional[str] = None
+    training_hours: Optional[float] = None
+    training_type: Optional[str] = None
+    competency_area: Optional[str] = None
+    passed: Optional[bool] = None
+    score: Optional[float] = None
+    certificate_number: Optional[str] = None
+    expiry_date: Optional[date] = None
+    notes: Optional[str] = None
+
+
+class TrainingRecordUpdateRequest(BaseModel):
+    employee_id: Optional[str] = None
+    training_title: Optional[str] = None
+    training_date: Optional[date] = None
     trainer_name: Optional[str] = None
     training_hours: Optional[float] = None
     training_type: Optional[str] = None
@@ -975,6 +1273,71 @@ async def get_training_record(
     )
 
 
+@router.put("/training/{training_id}", response_model=TrainingRecordDetailResponse)
+async def update_training_record(
+    training_id: str,
+    request: TrainingRecordUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a Training Record"""
+    # Build update dict from request
+    update_data = {}
+    if request.employee_id is not None:
+        update_data['employee_id'] = request.employee_id
+    if request.training_title is not None:
+        update_data['training_title'] = request.training_title
+    if request.training_date is not None:
+        update_data['training_date'] = request.training_date
+    if request.trainer_name is not None:
+        update_data['trainer_name'] = request.trainer_name
+    if request.training_hours is not None:
+        update_data['training_hours'] = request.training_hours
+    if request.training_type is not None:
+        update_data['training_type'] = request.training_type
+    if request.competency_area is not None:
+        update_data['competency_area'] = request.competency_area
+    if request.passed is not None:
+        update_data['passed'] = request.passed
+    if request.score is not None:
+        update_data['score'] = request.score
+    if request.certificate_number is not None:
+        update_data['certificate_number'] = request.certificate_number
+    if request.expiry_date is not None:
+        update_data['expiry_date'] = request.expiry_date
+    if request.notes is not None:
+        update_data['notes'] = request.notes
+    
+    try:
+        training = ArtifactService.update_training_record(
+            db=db,
+            training_id=training_id,
+            workspace_id=current_user.workspace_id,
+            **update_data
+        )
+        
+        return TrainingRecordDetailResponse(
+            id=training.id,
+            record_number=training.record_number,
+            employee_id=training.employee_id,
+            training_title=training.training_title,
+            training_date=training.training_date,
+            trainer_name=training.trainer_name,
+            training_hours=training.training_hours,
+            training_type=training.training_type,
+            competency_area=training.competency_area,
+            passed=training.passed,
+            score=training.score,
+            certificate_number=training.certificate_number,
+            expiry_date=training.expiry_date,
+            notes=training.notes,
+            created_at=training.created_at.isoformat(),
+            updated_at=training.updated_at.isoformat()
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 # ===== Customer Complaint Endpoints =====
 
 class CustomerComplaintCreateRequest(BaseModel):
@@ -985,6 +1348,18 @@ class CustomerComplaintCreateRequest(BaseModel):
     complaint_source: Optional[str] = None
     product_service: Optional[str] = None
     priority: Optional[str] = "medium"
+    assigned_to: Optional[str] = None
+    resolution_target_date: Optional[date] = None
+
+
+class CustomerComplaintUpdateRequest(BaseModel):
+    complaint_title: Optional[str] = None
+    complaint_description: Optional[str] = None
+    customer_name: Optional[str] = None
+    received_date: Optional[date] = None
+    complaint_source: Optional[str] = None
+    product_service: Optional[str] = None
+    priority: Optional[str] = None
     assigned_to: Optional[str] = None
     resolution_target_date: Optional[date] = None
 
@@ -1091,3 +1466,65 @@ async def get_customer_complaint(
         created_at=complaint.created_at.isoformat(),
         updated_at=complaint.updated_at.isoformat()
     )
+
+
+@router.put("/complaint/{complaint_id}", response_model=CustomerComplaintDetailResponse)
+async def update_customer_complaint(
+    complaint_id: str,
+    request: CustomerComplaintUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update a Customer Complaint"""
+    # Build update dict from request
+    update_data = {}
+    if request.complaint_title is not None:
+        update_data['complaint_title'] = request.complaint_title
+    if request.complaint_description is not None:
+        update_data['complaint_description'] = request.complaint_description
+    if request.customer_name is not None:
+        update_data['customer_name'] = request.customer_name
+    if request.received_date is not None:
+        update_data['received_date'] = request.received_date
+    if request.complaint_source is not None:
+        update_data['complaint_source'] = request.complaint_source
+    if request.product_service is not None:
+        update_data['product_service'] = request.product_service
+    if request.priority is not None:
+        update_data['priority'] = request.priority
+    if request.assigned_to is not None:
+        update_data['assigned_to'] = request.assigned_to
+    if request.resolution_target_date is not None:
+        update_data['resolution_target_date'] = request.resolution_target_date
+    
+    try:
+        complaint = ArtifactService.update_customer_complaint(
+            db=db,
+            complaint_id=complaint_id,
+            workspace_id=current_user.workspace_id,
+            **update_data
+        )
+        
+        return CustomerComplaintDetailResponse(
+            id=complaint.id,
+            complaint_number=complaint.complaint_number,
+            complaint_title=complaint.complaint_title,
+            complaint_description=complaint.complaint_description,
+            customer_name=complaint.customer_name,
+            received_date=complaint.received_date,
+            complaint_source=complaint.complaint_source,
+            product_service=complaint.product_service,
+            status=complaint.status,
+            priority=complaint.priority,
+            assigned_to=complaint.assigned_to,
+            root_cause=complaint.root_cause,
+            resolution=complaint.resolution,
+            resolution_date=complaint.resolution_date,
+            resolution_target_date=complaint.resolution_target_date,
+            customer_feedback=complaint.customer_feedback,
+            preventive_measures=complaint.preventive_measures,
+            created_at=complaint.created_at.isoformat(),
+            updated_at=complaint.updated_at.isoformat()
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
