@@ -413,3 +413,235 @@ async def get_audit_summary(
         year=year
     )
     return summary
+
+
+# ===== Management Review Endpoints =====
+
+class ManagementReviewCreateRequest(BaseModel):
+    review_date: date
+    attendees: Optional[str] = None
+    agenda: Optional[str] = None
+    minutes: Optional[str] = None
+    decisions: Optional[str] = None
+    action_items: Optional[str] = None
+    next_review_date: Optional[date] = None
+
+
+class ManagementReviewResponse(BaseModel):
+    id: str
+    review_number: str
+    review_date: date
+    attendees: Optional[str]
+    agenda: Optional[str]
+    minutes: Optional[str]
+    decisions: Optional[str]
+    action_items: Optional[str]
+    next_review_date: Optional[date]
+    created_by: str
+    created_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+@router.post("/management-review", response_model=ManagementReviewResponse, status_code=status.HTTP_201_CREATED)
+async def create_management_review(
+    request: ManagementReviewCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new management review"""
+    from datetime import datetime
+    review = ArtifactService.create_management_review(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        review_date=datetime.combine(request.review_date, datetime.min.time()),
+        attendees=request.attendees,
+        agenda=request.agenda,
+        minutes=request.minutes,
+        decisions=request.decisions,
+        action_items=request.action_items,
+        next_review_date=datetime.combine(request.next_review_date, datetime.min.time()) if request.next_review_date else None,
+        created_by=current_user.id
+    )
+    return review
+
+
+@router.get("/management-review", response_model=List[ManagementReviewResponse])
+async def list_management_reviews(
+    year: Optional[int] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List management reviews for workspace"""
+    reviews = ArtifactService.get_workspace_reviews(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        year=year,
+        limit=limit
+    )
+    return reviews
+
+
+# ===== Training Record Endpoints =====
+
+class TrainingRecordCreateRequest(BaseModel):
+    employee_id: str
+    training_title: str
+    training_date: date
+    trainer_name: Optional[str] = None
+    training_hours: Optional[float] = None
+    training_type: Optional[str] = None
+    competency_area: Optional[str] = None
+    passed: Optional[bool] = None
+    score: Optional[float] = None
+    certificate_number: Optional[str] = None
+    expiry_date: Optional[date] = None
+    notes: Optional[str] = None
+
+
+class TrainingRecordResponse(BaseModel):
+    id: str
+    employee_id: str
+    training_title: str
+    training_date: date
+    trainer_name: Optional[str]
+    training_hours: Optional[float]
+    training_type: Optional[str]
+    competency_area: Optional[str]
+    passed: Optional[bool]
+    score: Optional[float]
+    certificate_number: Optional[str]
+    expiry_date: Optional[date]
+    notes: Optional[str]
+    created_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+@router.post("/training", response_model=TrainingRecordResponse, status_code=status.HTTP_201_CREATED)
+async def create_training_record(
+    request: TrainingRecordCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new training record"""
+    from datetime import datetime
+    record = ArtifactService.create_training_record(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        employee_id=request.employee_id,
+        training_title=request.training_title,
+        training_date=datetime.combine(request.training_date, datetime.min.time()),
+        trainer_name=request.trainer_name,
+        training_hours=request.training_hours,
+        training_type=request.training_type,
+        competency_area=request.competency_area,
+        passed=request.passed,
+        score=request.score,
+        certificate_number=request.certificate_number,
+        expiry_date=datetime.combine(request.expiry_date, datetime.min.time()) if request.expiry_date else None,
+        notes=request.notes,
+        created_by=current_user.id
+    )
+    return record
+
+
+@router.get("/training", response_model=List[TrainingRecordResponse])
+async def list_training_records(
+    employee_id: Optional[str] = None,
+    competency_area: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List training records for workspace"""
+    records = ArtifactService.get_workspace_training(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        employee_id=employee_id,
+        competency_area=competency_area,
+        limit=limit
+    )
+    return records
+
+
+# ===== Customer Complaint Endpoints =====
+
+class CustomerComplaintCreateRequest(BaseModel):
+    complaint_title: str
+    complaint_description: str
+    customer_name: str
+    received_date: date
+    complaint_source: Optional[str] = None
+    product_service: Optional[str] = None
+    priority: Optional[str] = "medium"
+    assigned_to: Optional[str] = None
+    resolution_target_date: Optional[date] = None
+
+
+class CustomerComplaintResponse(BaseModel):
+    id: str
+    complaint_number: str
+    complaint_title: str
+    complaint_description: str
+    customer_name: str
+    received_date: date
+    complaint_source: Optional[str]
+    product_service: Optional[str]
+    priority: Optional[str]
+    status: str
+    assigned_to: Optional[str]
+    resolution_target_date: Optional[date]
+    resolution_date: Optional[date]
+    customer_satisfaction: Optional[str]
+    created_at: str
+    
+    class Config:
+        from_attributes = True
+
+
+@router.post("/complaint", response_model=CustomerComplaintResponse, status_code=status.HTTP_201_CREATED)
+async def create_customer_complaint(
+    request: CustomerComplaintCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new customer complaint"""
+    from datetime import datetime
+    complaint = ArtifactService.create_customer_complaint(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        complaint_title=request.complaint_title,
+        complaint_description=request.complaint_description,
+        customer_name=request.customer_name,
+        received_date=datetime.combine(request.received_date, datetime.min.time()),
+        complaint_source=request.complaint_source,
+        product_service=request.product_service,
+        priority=request.priority,
+        assigned_to=request.assigned_to,
+        resolution_target_date=datetime.combine(request.resolution_target_date, datetime.min.time()) if request.resolution_target_date else None,
+        created_by=current_user.id
+    )
+    return complaint
+
+
+@router.get("/complaint", response_model=List[CustomerComplaintResponse])
+async def list_customer_complaints(
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List customer complaints for workspace"""
+    complaints = ArtifactService.get_workspace_complaints(
+        db=db,
+        workspace_id=current_user.workspace_id,
+        status=status,
+        priority=priority,
+        limit=limit
+    )
+    return complaints

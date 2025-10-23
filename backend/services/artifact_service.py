@@ -393,3 +393,220 @@ class ArtifactService:
             "total_minor_findings": total_minor,
             "completion_rate": completed / total if total > 0 else 0
         }
+    
+    # Management Review methods
+    @staticmethod
+    def create_management_review(
+        db: Session,
+        workspace_id: str,
+        review_date: datetime,
+        attendees: Optional[str] = None,
+        agenda: Optional[str] = None,
+        minutes: Optional[str] = None,
+        decisions: Optional[str] = None,
+        action_items: Optional[str] = None,
+        next_review_date: Optional[datetime] = None,
+        created_by: Optional[str] = None
+    ) -> ManagementReview:
+        """Create a new management review"""
+        # Generate review number (MR-YYYY-QN format)
+        year = review_date.year
+        quarter = (review_date.month - 1) // 3 + 1
+        
+        # Find next number for this year and quarter
+        existing = db.query(ManagementReview).filter(
+            ManagementReview.workspace_id == workspace_id,
+            ManagementReview.review_number.like(f"MR-{year}-Q{quarter}%")
+        ).count()
+        
+        review_number = f"MR-{year}-Q{quarter}"
+        if existing > 0:
+            review_number = f"MR-{year}-Q{quarter}-{existing + 1}"
+        
+        review = ManagementReview(
+            id=str(uuid.uuid4()),
+            workspace_id=workspace_id,
+            review_number=review_number,
+            review_date=review_date,
+            attendees=attendees,
+            agenda=agenda,
+            minutes=minutes,
+            decisions=decisions,
+            action_items=action_items,
+            next_review_date=next_review_date,
+            created_by=created_by,
+            created_at=datetime.utcnow()
+        )
+        
+        db.add(review)
+        db.commit()
+        db.refresh(review)
+        return review
+    
+    @staticmethod
+    def get_workspace_reviews(
+        db: Session,
+        workspace_id: str,
+        year: Optional[int] = None,
+        limit: int = 100
+    ) -> List[ManagementReview]:
+        """Get management reviews for a workspace"""
+        query = db.query(ManagementReview).filter(
+            ManagementReview.workspace_id == workspace_id
+        )
+        
+        if year:
+            from sqlalchemy import extract
+            query = query.filter(extract('year', ManagementReview.review_date) == year)
+        
+        return query.order_by(ManagementReview.review_date.desc()).limit(limit).all()
+    
+    # Training Record methods
+    @staticmethod
+    def create_training_record(
+        db: Session,
+        workspace_id: str,
+        employee_id: str,
+        training_title: str,
+        training_date: datetime,
+        trainer_name: Optional[str] = None,
+        training_hours: Optional[float] = None,
+        training_type: Optional[str] = None,
+        competency_area: Optional[str] = None,
+        passed: Optional[bool] = None,
+        score: Optional[float] = None,
+        certificate_number: Optional[str] = None,
+        expiry_date: Optional[datetime] = None,
+        notes: Optional[str] = None,
+        created_by: Optional[str] = None
+    ) -> TrainingRecord:
+        """Create a new training record"""
+        record = TrainingRecord(
+            id=str(uuid.uuid4()),
+            workspace_id=workspace_id,
+            employee_id=employee_id,
+            training_title=training_title,
+            training_date=training_date,
+            trainer_name=trainer_name,
+            training_hours=training_hours,
+            training_type=training_type,
+            competency_area=competency_area,
+            passed=passed,
+            score=score,
+            certificate_number=certificate_number,
+            expiry_date=expiry_date,
+            notes=notes,
+            created_by=created_by,
+            created_at=datetime.utcnow()
+        )
+        
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+        return record
+    
+    @staticmethod
+    def get_workspace_training(
+        db: Session,
+        workspace_id: str,
+        employee_id: Optional[str] = None,
+        competency_area: Optional[str] = None,
+        limit: int = 100
+    ) -> List[TrainingRecord]:
+        """Get training records for a workspace"""
+        query = db.query(TrainingRecord).filter(
+            TrainingRecord.workspace_id == workspace_id
+        )
+        
+        if employee_id:
+            query = query.filter(TrainingRecord.employee_id == employee_id)
+        
+        if competency_area:
+            query = query.filter(TrainingRecord.competency_area == competency_area)
+        
+        return query.order_by(TrainingRecord.training_date.desc()).limit(limit).all()
+    
+    # Customer Complaint methods
+    @staticmethod
+    def create_customer_complaint(
+        db: Session,
+        workspace_id: str,
+        complaint_title: str,
+        complaint_description: str,
+        customer_name: str,
+        received_date: datetime,
+        complaint_source: Optional[str] = None,
+        product_service: Optional[str] = None,
+        priority: Optional[str] = None,
+        status: str = "OPEN",
+        assigned_to: Optional[str] = None,
+        resolution_target_date: Optional[datetime] = None,
+        resolution_description: Optional[str] = None,
+        resolution_date: Optional[datetime] = None,
+        customer_satisfaction: Optional[str] = None,
+        related_nc_id: Optional[str] = None,
+        root_cause: Optional[str] = None,
+        preventive_actions: Optional[str] = None,
+        created_by: Optional[str] = None
+    ) -> CustomerComplaint:
+        """Create a new customer complaint"""
+        # Generate complaint number (CC-YYYY-NNN format)
+        year = received_date.year
+        
+        # Find next number for this year
+        existing = db.query(CustomerComplaint).filter(
+            CustomerComplaint.workspace_id == workspace_id,
+            CustomerComplaint.complaint_number.like(f"CC-{year}-%")
+        ).count()
+        
+        complaint_number = f"CC-{year}-{existing + 1:03d}"
+        
+        complaint = CustomerComplaint(
+            id=str(uuid.uuid4()),
+            workspace_id=workspace_id,
+            complaint_number=complaint_number,
+            complaint_title=complaint_title,
+            complaint_description=complaint_description,
+            customer_name=customer_name,
+            received_date=received_date,
+            complaint_source=complaint_source,
+            product_service=product_service,
+            priority=priority,
+            status=status,
+            assigned_to=assigned_to,
+            resolution_target_date=resolution_target_date,
+            resolution_description=resolution_description,
+            resolution_date=resolution_date,
+            customer_satisfaction=customer_satisfaction,
+            related_nc_id=related_nc_id,
+            root_cause=root_cause,
+            preventive_actions=preventive_actions,
+            created_by=created_by,
+            created_at=datetime.utcnow()
+        )
+        
+        db.add(complaint)
+        db.commit()
+        db.refresh(complaint)
+        return complaint
+    
+    @staticmethod
+    def get_workspace_complaints(
+        db: Session,
+        workspace_id: str,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        limit: int = 100
+    ) -> List[CustomerComplaint]:
+        """Get customer complaints for a workspace"""
+        query = db.query(CustomerComplaint).filter(
+            CustomerComplaint.workspace_id == workspace_id
+        )
+        
+        if status:
+            query = query.filter(CustomerComplaint.status == status)
+        
+        if priority:
+            query = query.filter(CustomerComplaint.priority == priority)
+        
+        return query.order_by(CustomerComplaint.received_date.desc()).limit(limit).all()
