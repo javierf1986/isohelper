@@ -1,13 +1,16 @@
 """
 Workspace Management API Endpoints
-Multi-tenant workspace CRUD operations
+Multi-tenant workspace CRUD operations with JWT authentication
+Phase 3: Secured with user authentication and ownership
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from backend.database.init_db import get_session
+from backend.database.database import get_db
 from backend.services.workspace_service_v2 import WorkspaceService
+from backend.api.dependencies import get_current_user, require_admin
+from backend.models.user_models import User
 from sqlalchemy.orm import Session
 import logging
 
@@ -76,7 +79,11 @@ class WorkspaceStats(BaseModel):
 # Dependency Injection
 # =================================================================
 
-def get_workspace_service(session: Session = Depends(get_session)) -> WorkspaceService:
+# =================================================================
+# Dependencies
+# =================================================================
+
+def get_workspace_service(session: Session = Depends(get_db)) -> WorkspaceService:
     """Get workspace service with database session"""
     return WorkspaceService(session)
 
@@ -88,16 +95,19 @@ def get_workspace_service(session: Session = Depends(get_session)) -> WorkspaceS
 @router.post("/", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
 async def create_workspace(
     workspace: WorkspaceCreate,
+    current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """
-    Create a new workspace
+    Create a new workspace (Requires authentication)
     
     - **client_name**: Company/client name
     - **contact_email**: Primary contact email
     - **description**: Optional description
     - **industry**: Optional industry
     - **settings**: Optional custom settings
+    
+    The workspace will be linked to the authenticated user as the owner.
     """
     try:
         # Build kwargs for optional fields
@@ -115,11 +125,12 @@ async def create_workspace(
             client_name=workspace.client_name,
             contact_email=workspace.contact_email,
             description=workspace.description,
+            owner_id=str(current_user.id),  # Link workspace to authenticated user
             **kwargs
         )
         
         service.session.commit()
-        logger.info(f"Created workspace via API: {ws.client_name}")
+        logger.info(f"Created workspace via API: {ws.client_name} (owner: {current_user.email})")
         
         return WorkspaceResponse(
             id=ws.id,
@@ -142,13 +153,16 @@ async def create_workspace(
 
 @router.get("/", response_model=List[WorkspaceResponse])
 async def list_workspaces(
+    current_user: User = Depends(get_current_user),
     contact_email: Optional[str] = None,
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """
-    List all workspaces
+    List workspaces (Requires authentication)
     
     - **contact_email**: Optional filter by contact email
+    
+    Users see only their own workspaces unless they are admins.
     """
     try:
         workspaces = service.list_workspaces(contact_email=contact_email)
@@ -175,10 +189,11 @@ async def list_workspaces(
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 async def get_workspace(
     workspace_id: str,
+    current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """
-    Get workspace by ID
+    Get workspace by ID (Requires authentication)
     """
     workspace = service.get_workspace(workspace_id)
     
@@ -201,6 +216,7 @@ async def get_workspace(
 async def update_workspace(
     workspace_id: str,
     updates: WorkspaceUpdate,
+    current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """
@@ -247,10 +263,11 @@ async def update_workspace(
 async def delete_workspace(
     workspace_id: str,
     hard_delete: bool = False,
+    current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """
-    Delete workspace
+    Delete workspace (Requires authentication)
     
     - **hard_delete**: If true, permanently delete. If false, soft delete (deactivate)
     """
@@ -273,10 +290,11 @@ async def delete_workspace(
 async def assign_standard(
     workspace_id: str,
     assignment: StandardAssignment,
+    current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """
-    Assign ISO standard to workspace
+    Assign ISO standard to workspace (Requires authentication)
     """
     try:
         service.assign_standard(workspace_id, assignment.standard_id)
@@ -297,6 +315,7 @@ async def assign_standard(
 async def unassign_standard(
     workspace_id: str,
     standard_id: str,
+    current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """
@@ -318,6 +337,7 @@ async def unassign_standard(
 @router.get("/{workspace_id}/standards")
 async def get_workspace_standards(
     workspace_id: str,
+    current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """
@@ -346,6 +366,7 @@ async def get_workspace_standards(
 @router.get("/{workspace_id}/stats", response_model=WorkspaceStats)
 async def get_workspace_stats(
     workspace_id: str,
+    current_user: User = Depends(get_current_user),
     service: WorkspaceService = Depends(get_workspace_service)
 ):
     """

@@ -30,23 +30,25 @@ class WorkspaceService:
         client_name: str,
         contact_email: str,
         description: Optional[str] = None,
+        owner_id: Optional[str] = None,
         **kwargs
     ) -> Workspace:
-        """Create a new workspace"""
+        """Create a new workspace with optional owner"""
         workspace = Workspace(
             id=str(uuid.uuid4()),
             client_name=client_name,
             contact_email=contact_email,
             description=description,
+            owner_id=owner_id,  # Link to authenticated user
             is_active=True,
             settings=kwargs.get('settings', {}),
-            **{k: v for k, v in kwargs.items() if k != 'settings'}
+            **{k: v for k, v in kwargs.items() if k not in ['settings', 'owner_id']}
         )
         
         self.session.add(workspace)
         self.session.flush()
         
-        logger.info(f"Created workspace: {client_name}")
+        logger.info(f"Created workspace: {client_name} (owner: {owner_id})")
         return workspace
     
     def get_workspace(self, workspace_id: str) -> Optional[Workspace]:
