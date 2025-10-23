@@ -8,6 +8,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth-store';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 function DashboardContent() {
   const router = useRouter();
@@ -28,6 +29,7 @@ function DashboardContent() {
             <p className="text-sm text-gray-600">Quality Management System Platform</p>
           </div>
           <div className="flex items-center gap-4">
+            <LanguageSelector />
             <div className="text-right">
               <p className="text-sm font-medium text-gray-900">{user?.full_name || user?.email}</p>
               <p className="text-xs text-gray-500">{user?.role}</p>

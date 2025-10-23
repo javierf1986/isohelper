@@ -8,11 +8,18 @@ export default createMiddleware({
   // Used when no locale matches
   defaultLocale,
 
-  // Automatic locale detection
+  // Automatic locale detection from Accept-Language header
   localeDetection: true,
+  
+  // Only add locale prefix for non-default locales
+  localePrefix: 'as-needed'
 });
 
 export const config = {
-  // Match only internationalized pathnames
-  matcher: ['/', '/(en|es|fr|de|zh)/:path*'],
+  // Match all pathnames except for
+  // - /api routes
+  // - /_next (Next.js internals)
+  // - /_static (inside /public)
+  // - all root files inside /public (e.g. favicon.ico)
+  matcher: ['/((?!api|_next|_static|.*\\..*).*)'],
 };
