@@ -104,6 +104,33 @@ class CAResponse(BaseModel):
         from_attributes = True
 
 
+class CADetailResponse(BaseModel):
+    id: str
+    ca_number: str
+    title: str
+    description: str
+    action_plan: str
+    status: str
+    priority: str
+    assigned_to: str
+    nc_id: Optional[str]
+    nc_number: Optional[str]
+    planned_start_date: date
+    planned_completion_date: date
+    actual_start_date: Optional[date]
+    actual_completion_date: Optional[date]
+    progress_updates: Optional[str]
+    resources_required: Optional[str]
+    is_effective: Optional[bool]
+    effectiveness_results: Optional[str]
+    effectiveness_check_date: Optional[date]
+    created_at: str
+    updated_at: str
+    
+    class Config:
+        from_attributes = True
+
+
 class AuditCreateRequest(BaseModel):
     title: str
     audit_type: AuditType
@@ -401,6 +428,55 @@ async def list_cas(
             created_at=ca.created_at.isoformat()
         ) for ca in cas
     ]
+
+
+@router.get("/ca/{ca_id}", response_model=CADetailResponse)
+async def get_ca(
+    ca_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get a specific Corrective Action by ID"""
+    ca = ArtifactService.get_ca_by_id(
+        db=db,
+        ca_id=ca_id,
+        workspace_id=current_user.workspace_id
+    )
+    
+    if not ca:
+        raise HTTPException(status_code=404, detail="Corrective Action not found")
+    
+    # Get NC number if linked
+    nc_number = None
+    if ca.nc_id:
+        from backend.models.artifact_models import NonConformity
+        nc = db.query(NonConformity).filter(NonConformity.id == ca.nc_id).first()
+        if nc:
+            nc_number = nc.nc_number
+    
+    return CADetailResponse(
+        id=ca.id,
+        ca_number=ca.ca_number,
+        title=ca.title,
+        description=ca.description,
+        action_plan=ca.action_plan,
+        status=ca.status.value,
+        priority=ca.priority,
+        assigned_to=ca.assigned_to,
+        nc_id=ca.nc_id,
+        nc_number=nc_number,
+        planned_start_date=ca.planned_start_date,
+        planned_completion_date=ca.planned_completion_date,
+        actual_start_date=ca.actual_start_date,
+        actual_completion_date=ca.actual_completion_date,
+        progress_updates=ca.progress_updates,
+        resources_required=ca.resources_required,
+        is_effective=ca.is_effective,
+        effectiveness_results=ca.effectiveness_results,
+        effectiveness_check_date=ca.effectiveness_check_date,
+        created_at=ca.created_at.isoformat(),
+        updated_at=ca.updated_at.isoformat()
+    )
 
 
 # ===== Internal Audit Endpoints =====

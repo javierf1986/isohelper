@@ -257,6 +257,16 @@ class ArtifactService:
         
         return query.order_by(CorrectiveAction.created_at.desc()).limit(limit).all()
     
+    @staticmethod
+    def get_ca_by_id(db: Session, ca_id: str, workspace_id: str) -> Optional[CorrectiveAction]:
+        """Get a single CA by ID"""
+        return db.query(CorrectiveAction).filter(
+            and_(
+                CorrectiveAction.id == ca_id,
+                CorrectiveAction.workspace_id == workspace_id
+            )
+        ).first()
+    
     # ===== Internal Audit Management =====
     
     @staticmethod
