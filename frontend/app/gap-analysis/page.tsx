@@ -7,6 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 interface Analysis {
@@ -24,6 +25,7 @@ interface Analysis {
 }
 
 export default function GapAnalysisListPage() {
+  const t = useTranslations();
   const router = useRouter();
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,10 +51,10 @@ export default function GapAnalysisListPage() {
         const data = await response.json();
         setAnalyses(data);
       } else {
-        setError('Failed to load analyses');
+        setError(t('gapAnalysis.loadError'));
       }
     } catch (err) {
-      setError('Error loading analyses');
+      setError(t('gapAnalysis.loadError'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +70,7 @@ export default function GapAnalysisListPage() {
 
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
-        {status === 'processing' ? `Processing (${progress}%)` : status.toUpperCase()}
+        {status === 'processing' ? `${t('gapAnalysis.processing')} (${progress}%)` : status.toUpperCase()}
       </span>
     );
   };
@@ -100,14 +102,14 @@ export default function GapAnalysisListPage() {
           {/* Header */}
           <div className="mb-8 flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Gap Analyses</h1>
-              <p className="mt-2 text-gray-600">AI-powered compliance gap identification</p>
+              <h1 className="text-3xl font-bold text-gray-900">{t('gapAnalysis.title')}</h1>
+              <p className="mt-2 text-gray-600">{t('gapAnalysis.subtitle')}</p>
             </div>
             <button
               onClick={() => router.push('/gap-analysis/upload')}
               className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
             >
-              + New Analysis
+              + {t('gapAnalysis.newAnalysis')}
             </button>
           </div>
 
@@ -122,15 +124,15 @@ export default function GapAnalysisListPage() {
           {analyses.length === 0 ? (
             <div className="bg-white rounded-lg shadow-lg p-12 text-center">
               <div className="text-6xl mb-4">📊</div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Gap Analyses Yet</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">{t('gapAnalysis.noAnalyses')}</h2>
               <p className="text-gray-600 mb-6">
-                Upload your QMS documentation to start identifying compliance gaps with AI
+                {t('gapAnalysis.noAnalysesDesc')}
               </p>
               <button
                 onClick={() => router.push('/gap-analysis/upload')}
                 className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
               >
-                Create First Analysis
+                {t('gapAnalysis.createFirst')}
               </button>
             </div>
           ) : (
@@ -151,7 +153,7 @@ export default function GapAnalysisListPage() {
                       </div>
                       <p className="text-gray-600">{analysis.document_name}</p>
                       <p className="text-sm text-gray-500 mt-1">
-                        Created: {formatDate(analysis.created_at)}
+                        {t('gapAnalysis.created')}: {formatDate(analysis.created_at)}
                       </p>
                     </div>
 
@@ -163,7 +165,7 @@ export default function GapAnalysisListPage() {
                         }}>
                           {analysis.compliance_score.toFixed(0)}%
                         </div>
-                        <p className="text-sm text-gray-500">Compliance</p>
+                        <p className="text-sm text-gray-500">{t('gapAnalysis.compliance')}</p>
                       </div>
                     )}
                   </div>
@@ -172,21 +174,21 @@ export default function GapAnalysisListPage() {
                     <div className="grid grid-cols-4 gap-4 pt-4 border-t">
                       <div>
                         <p className="text-2xl font-bold text-gray-900">{analysis.total_gaps}</p>
-                        <p className="text-xs text-gray-500">Total Gaps</p>
+                        <p className="text-xs text-gray-500">{t('gapAnalysis.totalGaps')}</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-red-600">{analysis.critical_gaps}</p>
-                        <p className="text-xs text-gray-500">Critical</p>
+                        <p className="text-xs text-gray-500">{t('gapAnalysis.critical')}</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-orange-600">{analysis.major_gaps}</p>
-                        <p className="text-xs text-gray-500">Major</p>
+                        <p className="text-xs text-gray-500">{t('gapAnalysis.major')}</p>
                       </div>
                       <div>
                         <p className="text-2xl font-bold text-blue-600">
                           {analysis.total_gaps - analysis.critical_gaps - analysis.major_gaps}
                         </p>
-                        <p className="text-xs text-gray-500">Minor</p>
+                        <p className="text-xs text-gray-500">{t('gapAnalysis.minor')}</p>
                       </div>
                     </div>
                   )}

@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { documentService, type ISOStandard, type Clause } from '@/lib/document-service';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -15,6 +16,7 @@ type Step = 'standard' | 'clauses' | 'company' | 'generating';
 
 function GenerateContent() {
   const router = useRouter();
+  const t = useTranslations();
   const [currentStep, setCurrentStep] = useState<Step>('standard');
   const [selectedStandard, setSelectedStandard] = useState<string>('');
   const [selectedClauses, setSelectedClauses] = useState<string[]>([]);
@@ -92,7 +94,7 @@ function GenerateContent() {
   const renderStandardSelection = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Select ISO Standard</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('generate.selectStandard')}</h2>
         <p className="text-gray-600">Choose the ISO standard for your documentation</p>
       </div>
 
@@ -124,7 +126,7 @@ function GenerateContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Select Clauses</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('generate.selectClauses')}</h2>
           <p className="text-gray-600">Choose which clauses to include in your document</p>
         </div>
         <button
@@ -140,13 +142,13 @@ function GenerateContent() {
           onClick={handleSelectAll}
           className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
-          Select All
+          {t('generate.selectAll')}
         </button>
         <button
           onClick={handleDeselectAll}
           className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
         >
-          Deselect All
+          {t('generate.deselectAll')}
         </button>
         <div className="ml-auto text-sm text-gray-600 flex items-center">
           Selected: {selectedClauses.length} / {clauses?.length || 0}
@@ -200,21 +202,21 @@ function GenerateContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Company Information</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('generate.companyInfo')}</h2>
           <p className="text-gray-600">Provide details about your organization</p>
         </div>
         <button
           onClick={() => setCurrentStep('clauses')}
           className="text-blue-600 hover:text-blue-700 font-medium"
         >
-          ← Back
+          ← {t('common.back')}
         </button>
       </div>
 
       <div className="space-y-4">
         <div>
           <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
-            Company Name *
+            {t('generate.companyName')} *
           </label>
           <input
             type="text"
@@ -264,7 +266,7 @@ function GenerateContent() {
             className="h-4 w-4 text-blue-600 rounded"
           />
           <label htmlFor="useAI" className="ml-2 text-sm text-gray-700">
-            Use AI Enhancement (Recommended)
+            {t('generate.enableAI')}
           </label>
         </div>
       </div>
@@ -275,7 +277,7 @@ function GenerateContent() {
           disabled={!companyName || generateMutation.isPending}
           className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {generateMutation.isPending ? 'Generating...' : 'Generate Document'}
+          {generateMutation.isPending ? t('generate.generating') : t('dashboard.generateDocument')}
         </button>
       </div>
     </div>
@@ -287,7 +289,7 @@ function GenerateContent() {
         <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
       </div>
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Generating Your Document</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('generate.generating')}</h2>
         <p className="text-gray-600 mb-4">
           {useAI ? 'AI is enhancing your content...' : 'Creating your document...'}
         </p>
@@ -296,22 +298,22 @@ function GenerateContent() {
       
       {generateMutation.isSuccess && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
-          <p className="text-green-800 font-medium">✓ Document generated successfully!</p>
-          <p className="text-sm text-green-600 mt-1">Redirecting to document library...</p>
+          <p className="text-green-800 font-medium">✓ {t('generate.documentSuccess')}</p>
+          <p className="text-sm text-green-600 mt-1">{t('generate.redirecting')}</p>
         </div>
       )}
 
       {generateMutation.isError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-6">
-          <p className="text-red-800 font-medium">✗ Failed to generate document</p>
+          <p className="text-red-800 font-medium">✗ {t('generate.documentFailed')}</p>
           <p className="text-sm text-red-600 mt-1">
-            {(generateMutation.error as any)?.response?.data?.detail || 'Please try again'}
+            {(generateMutation.error as any)?.response?.data?.detail || t('generate.tryAgain')}
           </p>
           <button
             onClick={() => setCurrentStep('company')}
             className="mt-3 text-sm text-red-600 hover:text-red-700 font-medium"
           >
-            ← Go Back
+            ← {t('generate.goBack')}
           </button>
         </div>
       )}
@@ -324,12 +326,12 @@ function GenerateContent() {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Generate Document</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('dashboard.generateDocument')}</h1>
             <button
               onClick={() => router.push('/dashboard')}
               className="text-gray-600 hover:text-gray-900"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -340,10 +342,10 @@ function GenerateContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-center gap-4">
             {[
-              { id: 'standard', label: 'Standard' },
-              { id: 'clauses', label: 'Clauses' },
-              { id: 'company', label: 'Company Info' },
-              { id: 'generating', label: 'Generate' },
+              { id: 'standard', label: t('generate.progressStandard') },
+              { id: 'clauses', label: t('generate.progressClauses') },
+              { id: 'company', label: t('generate.progressCompanyInfo') },
+              { id: 'generating', label: t('generate.progressGenerate') },
             ].map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div className={`flex items-center ${
