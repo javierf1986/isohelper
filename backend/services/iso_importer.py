@@ -73,7 +73,7 @@ class ISOTextExtractor:
         
     def extract_from_pdf(self, file_path: Path) -> Tuple[str, int]:
         """
-        Extract text from PDF file with layout preservation
+        Extract text from PDF file with improved text flow handling
         
         Args:
             file_path: Path to PDF file
@@ -89,8 +89,9 @@ class ISOTextExtractor:
                 logger.info(f"Extracting text from {page_count} pages in {file_path.name}")
                 
                 for page_num, page in enumerate(pdf.pages, 1):
-                    # Extract text with layout preservation
-                    text = page.extract_text(layout=True)
+                    # Extract text without strict layout to avoid mid-word line breaks
+                    # This allows text to flow naturally instead of preserving column positions
+                    text = page.extract_text(layout=False)
                     
                     if text:
                         # Add page marker for reference
@@ -116,7 +117,7 @@ class ISOTextExtractor:
             Tuple of (extracted_text, paragraph_count)
         """
         try:
-            doc = Document(file_path)
+            doc = Document(str(file_path))
             paragraphs = []
             
             logger.info(f"Extracting text from {len(doc.paragraphs)} paragraphs in {file_path.name}")
@@ -169,6 +170,29 @@ class ISOTextExtractor:
         """
         # Remove page markers but keep line structure
         text = re.sub(r'--- Page \d+ ---\s*', '', text)
+        
+        # Fix hyphenated words split across lines (e.g., "conside-\nraciones" -> "consideraciones")
+        text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
+        
+        # Join lines that end without punctuation and continue on next line
+        # This fixes text flow issues from PDFs (e.g., "la calidad\nincluidas" -> "la calidad incluidas")
+        text = re.sub(r'([a-záéíóúñ])\s*\n\s*([a-záéíóúñ])', r'\1 \2', text, flags=re.IGNORECASE)
+        
+        # Remove common ISO PDF headers/footers
+        text = re.sub(r'© ISO \d{4}[^\n]*', '', text)  # Copyright lines
+        text = re.sub(r'ISO \d+:\d{4}[^\n]{0,50}traducción oficial[^\n]*', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'PDF\s*[–-]\s*Exoneración de responsabilidad[^\n]*', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'Traducción oficial/Official translation/Traduction officielle[^\n]*', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'Todos los derechos reservados[^\n]*', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'All rights reserved[^\n]*', '', text, flags=re.IGNORECASE)
+        
+        # Remove standalone page numbers at line start or end
+        text = re.sub(r'^\s*\d{1,3}\s*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^\s*[ivxlcdm]+\s*$', '', text, flags=re.MULTILINE | re.IGNORECASE)  # Roman numerals
+        
+        # Remove page number suffixes from clause titles (e.g., "4.1 Title 12" -> "4.1 Title")
+        # This pattern finds clause numbers followed by text and trailing page numbers
+        text = re.sub(r'(\d+(?:\.\d+)*\s+[^\n]+?)\s+\d{1,3}\s*$', r'\1', text, flags=re.MULTILINE)
         
         # Normalize multiple blank lines to double newline
         text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
@@ -288,10 +312,24 @@ class ISOClauseDetector:
             clause_number = match.group(1)
             clause_title = match.group(2).strip()
             
+            # Clean up the clause title
+            clause_title = self._clean_clause_title(clause_title)
+            
+            # Skip if title is too short or looks like junk
+            if len(clause_title) < 3 or self._is_junk_clause(clause_title):
+                continue
+            
             # Get clause content (text between this header and next header)
             start_pos = match.end()
             end_pos = matches[i + 1].start() if i + 1 < len(matches) else len(text)
             content = text[start_pos:end_pos].strip()
+            
+            # Clean the content
+            content = self._clean_clause_content(content)
+            
+            # Skip if content is empty or too short
+            if len(content) < 10:
+                continue
             
             # Determine clause type
             clause_type = self._classify_clause(content)
@@ -313,8 +351,59 @@ class ISOClauseDetector:
             
             clauses.append(clause)
             
-        logger.info(f"Successfully detected {len(clauses)} clauses")
+        logger.info(f"Successfully detected {len(clauses)} valid clauses")
         return clauses
+    
+    def _clean_clause_title(self, title: str) -> str:
+        """Clean clause title by removing page numbers and junk"""
+        # Remove trailing page numbers (e.g., "Title 12" -> "Title")
+        title = re.sub(r'\s+\d{1,3}\s*$', '', title)
+        
+        # Remove trailing dots and whitespace
+        title = title.rstrip('. ')
+        
+        # Remove any remaining copyright or header fragments
+        title = re.sub(r'©\s*ISO.*', '', title, flags=re.IGNORECASE)
+        title = re.sub(r'traducción oficial.*', '', title, flags=re.IGNORECASE)
+        
+        return title.strip()
+    
+    def _clean_clause_content(self, content: str) -> str:
+        """Clean clause content by removing headers, footers, and junk"""
+        # Remove copyright notices
+        content = re.sub(r'©\s*ISO\s*\d{4}[^\n]*\n?', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'ISO\s*\d+:\d{4}\s*\(traducción oficial\)[^\n]*\n?', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'PDF\s*[–-]\s*Exoneración[^\n]+\n?', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'Traducción oficial/Official translation[^\n]*\n?', '', content, flags=re.IGNORECASE)
+        
+        # Remove standalone page numbers
+        content = re.sub(r'^\s*\d{1,3}\s*\n', '', content, flags=re.MULTILINE)
+        
+        # Remove multiple newlines
+        content = re.sub(r'\n{3,}', '\n\n', content)
+        
+        return content.strip()
+    
+    def _is_junk_clause(self, title: str) -> bool:
+        """Check if clause title looks like junk (headers, footers, etc.)"""
+        junk_patterns = [
+            r'^©',
+            r'traducción oficial',
+            r'official translation',
+            r'traduction officielle',
+            r'todos los derechos',
+            r'all rights reserved',
+            r'exoneración',
+            r'disclaimer',
+            r'^pdf\b',
+        ]
+        
+        title_lower = title.lower()
+        for pattern in junk_patterns:
+            if re.search(pattern, title_lower):
+                return True
+        
+        return False
     
     def _classify_clause(self, content: str) -> ClauseType:
         """Classify clause as requirement, guidance, note, or example"""

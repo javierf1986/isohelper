@@ -5,6 +5,7 @@ import { getMessages } from 'next-intl/server';
 import { QueryProvider } from "@/lib/query-client";
 import { cookies } from 'next/headers';
 import { locales, defaultLocale, type Locale } from '@/i18n/config';
+import Navigation from "@/components/Navigation";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,7 +48,10 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
           <QueryProvider>
-            {children}
+            <Navigation />
+            <div className="lg:ml-64">
+              {children}
+            </div>
           </QueryProvider>
         </NextIntlClientProvider>
       </body>
