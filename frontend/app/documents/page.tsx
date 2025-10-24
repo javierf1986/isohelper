@@ -6,6 +6,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { documentService } from '@/lib/document-service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +15,7 @@ import { ExportModal } from '@/components/ExportModal';
 
 function DocumentsContent() {
   const router = useRouter();
+  const t = useTranslations();
   const queryClient = useQueryClient();
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [exportingDoc, setExportingDoc] = useState<{ id: number; title: string; file_path: string } | null>(null);
@@ -44,7 +46,7 @@ function DocumentsContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Document Library</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{t('documents.library')}</h1>
               <p className="text-sm text-gray-600">Manage your ISO documentation</p>
             </div>
             <div className="flex gap-2">
@@ -52,13 +54,13 @@ function DocumentsContent() {
                 onClick={() => router.push('/generate')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
-                Generate New
+                {t('documents.generate')}
               </button>
               <button
                 onClick={() => router.push('/dashboard')}
                 className="px-4 py-2 text-gray-600 hover:text-gray-900"
               >
-                Back to Dashboard
+                {t('common.back')}
               </button>
             </div>
           </div>
@@ -77,16 +79,16 @@ function DocumentsContent() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Title
+                    {t('documents.documentTitle')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ISO Standard
+                    {t('documents.isoStandard')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
+                    {t('documents.createdDate')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    {t('documents.actions')}
                   </th>
                 </tr>
               </thead>
@@ -110,13 +112,13 @@ function DocumentsContent() {
                           onClick={() => router.push(`/documents/${doc.id}`)}
                           className="text-blue-600 hover:text-blue-900"
                         >
-                          View
+                          {t('common.view')}
                         </button>
                         <button
                           onClick={() => setExportingDoc({ id: doc.id, title: doc.title, file_path: doc.file_path })}
                           className="text-green-600 hover:text-green-900"
                         >
-                          Export
+                          {t('common.export')}
                         </button>
                         {deleteConfirm === doc.id ? (
                           <>
@@ -124,13 +126,13 @@ function DocumentsContent() {
                               onClick={() => handleDelete(doc.id)}
                               className="text-red-600 hover:text-red-900"
                             >
-                              Confirm
+                              {t('common.confirm')}
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(null)}
                               className="text-gray-600 hover:text-gray-900"
                             >
-                              Cancel
+                              {t('common.cancel')}
                             </button>
                           </>
                         ) : (
@@ -138,7 +140,7 @@ function DocumentsContent() {
                             onClick={() => setDeleteConfirm(doc.id)}
                             className="text-red-600 hover:text-red-900"
                           >
-                            Delete
+                            {t('common.delete')}
                           </button>
                         )}
                       </div>
@@ -163,7 +165,7 @@ function DocumentsContent() {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No documents</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">{t('documents.noDocuments')}</h3>
             <p className="mt-1 text-sm text-gray-500">Get started by generating your first document.</p>
             <div className="mt-6">
               <button
@@ -173,7 +175,7 @@ function DocumentsContent() {
                 <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Generate Document
+                {t('documents.generate')}
               </button>
             </div>
           </div>

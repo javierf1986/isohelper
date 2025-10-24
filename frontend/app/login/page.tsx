@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@/store/auth-store';
 
 const loginSchema = z.object({
@@ -22,6 +23,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useTranslations();
   const login = useAuthStore((state) => state.login);
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -54,7 +56,7 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">ISO Helper</h1>
-          <p className="text-gray-600">Sign in to your account</p>
+          <p className="text-gray-600">{t('auth.login')}</p>
         </div>
 
         {/* Error Message */}
@@ -69,7 +71,7 @@ export default function LoginPage() {
           {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              {t('auth.email')}
             </label>
             <input
               {...register('email')}
@@ -86,7 +88,7 @@ export default function LoginPage() {
           {/* Password Field */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              {t('auth.password')}
             </label>
             <input
               {...register('password')}
@@ -106,16 +108,16 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? 'Signing in...' : 'Sign In'}
+            {isLoading ? t('common.loading') : t('auth.login')}
           </button>
         </form>
 
         {/* Register Link */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+            {t('auth.noAccount')}{' '}
             <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-              Sign up
+              {t('auth.register')}
             </Link>
           </p>
         </div>

@@ -49,7 +49,7 @@ function DashboardContent() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back!</h2>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('dashboard.welcome', { name: user?.full_name || 'User' })}</h2>
           <p className="text-gray-600">Manage your ISO documentation and compliance</p>
         </div>
 
@@ -58,7 +58,7 @@ function DashboardContent() {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Documents</p>
+                <p className="text-sm text-gray-600">{t('documents.title')}</p>
                 <p className="text-3xl font-bold text-gray-900">0</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-full">
@@ -86,7 +86,7 @@ function DashboardContent() {
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Exports</p>
+                <p className="text-sm text-gray-600">{t('common.export')}</p>
                 <p className="text-3xl font-bold text-gray-900">0</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-full">
@@ -100,7 +100,7 @@ function DashboardContent() {
 
         {/* Quick Actions */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">{t('dashboard.quickActions')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button 
               onClick={() => router.push('/generate')}
@@ -113,7 +113,7 @@ function DashboardContent() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Generate New Document</p>
+                  <p className="font-medium text-gray-900">{t('dashboard.generateDocument')}</p>
                   <p className="text-sm text-gray-600">Create ISO 9001 documentation with AI</p>
                 </div>
               </div>
@@ -130,7 +130,7 @@ function DashboardContent() {
                   </svg>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">View Documents</p>
+                  <p className="font-medium text-gray-900">{t('dashboard.viewDocuments')}</p>
                   <p className="text-sm text-gray-600">Browse your document library</p>
                 </div>
               </div>

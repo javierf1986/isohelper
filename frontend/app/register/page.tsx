@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@/store/auth-store';
 
 const registerSchema = z.object({
@@ -27,6 +28,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useTranslations();
   const register = useAuthStore((state) => state.register);
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -58,7 +60,7 @@ export default function RegisterPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('auth.register')}</h1>
           <p className="text-gray-600">Get started with ISO Helper</p>
         </div>
 
@@ -74,7 +76,7 @@ export default function RegisterPage() {
           {/* Full Name Field */}
           <div>
             <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name (Optional)
+              {t('auth.fullName')}
             </label>
             <input
               {...registerField('fullName')}
@@ -88,7 +90,7 @@ export default function RegisterPage() {
           {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              {t('auth.email')}
             </label>
             <input
               {...registerField('email')}
@@ -105,7 +107,7 @@ export default function RegisterPage() {
           {/* Password Field */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              {t('auth.password')}
             </label>
             <input
               {...registerField('password')}
@@ -123,7 +125,7 @@ export default function RegisterPage() {
           {/* Confirm Password Field */}
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-              Confirm Password
+              {t('auth.confirmPassword')}
             </label>
             <input
               {...registerField('confirmPassword')}
@@ -143,16 +145,16 @@ export default function RegisterPage() {
             disabled={isLoading}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isLoading ? 'Creating account...' : 'Create Account'}
+            {isLoading ? t('common.loading') : t('auth.register')}
           </button>
         </form>
 
         {/* Login Link */}
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
-            Already have an account?{' '}
+            {t('auth.hasAccount')}{' '}
             <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
-              Sign in
+              {t('auth.login')}
             </Link>
           </p>
         </div>
