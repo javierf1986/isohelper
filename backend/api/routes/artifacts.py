@@ -4,16 +4,18 @@ Phase 4.3: REST endpoints for NC, CA, Audits
 """
 from typing import List, Optional
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import case
+from sqlalchemy import case, func, extract
 from pydantic import BaseModel
 
 from backend.database.database import get_db
 from backend.api.dependencies import get_current_user
 from backend.models.user_models import User
 from backend.models.artifact_models import (
-    NCStatus, NCSeverity, CAStatus, AuditType, AuditStatus
+    NCStatus, NCSeverity, CAStatus, AuditType, AuditStatus,
+    NonConformity, CorrectiveAction, InternalAudit, 
+    ManagementReview, TrainingRecord, CustomerComplaint
 )
 from backend.services.artifact_service import ArtifactService
 
@@ -293,7 +295,7 @@ async def create_nc(
             title=request.title,
             description=request.description,
             severity=request.severity,
-            reported_by=current_user.id,
+            reported_by=str(current_user.id),
             detected_date=request.detected_date,
             category=request.category,
             detected_location=request.detected_location,
@@ -302,16 +304,16 @@ async def create_nc(
         )
         
         return NCResponse(
-            id=nc.id,
-            nc_number=nc.nc_number,
-            title=nc.title,
-            description=nc.description,
+            id=str(nc.id),
+            nc_number=str(nc.nc_number),
+            title=str(nc.title),
+            description=str(nc.description),
             severity=nc.severity.value,
             status=nc.status.value,
-            detected_date=nc.detected_date,
-            category=nc.category,
-            reported_by=nc.reported_by,
-            created_at=nc.created_at.isoformat()
+            detected_date=nc.detected_date,  # type: ignore
+            category=nc.category,  # type: ignore
+            reported_by=str(nc.reported_by),
+            created_at=nc.created_at.isoformat()  # type: ignore
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -336,16 +338,16 @@ async def list_ncs(
     
     return [
         NCResponse(
-            id=nc.id,
-            nc_number=nc.nc_number,
-            title=nc.title,
-            description=nc.description,
+            id=str(nc.id),
+            nc_number=str(nc.nc_number),
+            title=str(nc.title),
+            description=str(nc.description),
             severity=nc.severity.value,
             status=nc.status.value,
-            detected_date=nc.detected_date,
-            category=nc.category,
-            reported_by=nc.reported_by,
-            created_at=nc.created_at.isoformat()
+            detected_date=nc.detected_date,  # type: ignore
+            category=nc.category,  # type: ignore
+            reported_by=str(nc.reported_by),
+            created_at=nc.created_at.isoformat()  # type: ignore
         )
         for nc in ncs
     ]
@@ -368,28 +370,28 @@ async def get_nc(
         raise HTTPException(status_code=404, detail="Non-Conformity not found")
     
     return NCDetailResponse(
-        id=nc.id,
-        nc_number=nc.nc_number,
-        title=nc.title,
-        description=nc.description,
+        id=str(nc.id),
+        nc_number=str(nc.nc_number),
+        title=str(nc.title),
+        description=str(nc.description),
         severity=nc.severity.value,
         status=nc.status.value,
-        detected_date=nc.detected_date,
-        category=nc.category,
-        detected_location=nc.detected_location,
-        reported_by=nc.reported_by,
-        iso_standard_id=nc.iso_standard_id,
-        iso_clause_number=nc.iso_clause_number,
-        root_cause=nc.root_cause,
-        contributing_factors=nc.contributing_factors,
-        immediate_actions=nc.immediate_actions,
-        ai_analysis=nc.ai_analysis,
-        target_closure_date=nc.target_closure_date,
-        actual_closure_date=nc.actual_closure_date,
-        verified_by=nc.verified_by,
-        verified_at=nc.verified_at.isoformat() if nc.verified_at else None,
-        created_at=nc.created_at.isoformat(),
-        updated_at=nc.updated_at.isoformat()
+        detected_date=nc.detected_date,  # type: ignore
+        category=nc.category,  # type: ignore
+        detected_location=nc.detected_location,  # type: ignore
+        reported_by=str(nc.reported_by),
+        iso_standard_id=nc.iso_standard_id,  # type: ignore
+        iso_clause_number=nc.iso_clause_number,  # type: ignore
+        root_cause=nc.root_cause,  # type: ignore
+        contributing_factors=nc.contributing_factors,  # type: ignore
+        immediate_actions=nc.immediate_actions,  # type: ignore
+        ai_analysis=nc.ai_analysis,  # type: ignore
+        target_closure_date=nc.target_closure_date,  # type: ignore
+        actual_closure_date=nc.actual_closure_date,  # type: ignore
+        verified_by=nc.verified_by,  # type: ignore
+        verified_at=nc.verified_at.isoformat() if nc.verified_at else None,  # type: ignore
+        created_at=nc.created_at.isoformat(),  # type: ignore
+        updated_at=nc.updated_at.isoformat()  # type: ignore
     )
 
 
@@ -433,28 +435,28 @@ async def update_nc(
         )
         
         return NCDetailResponse(
-            id=nc.id,
-            nc_number=nc.nc_number,
-            title=nc.title,
-            description=nc.description,
+            id=str(nc.id),
+            nc_number=str(nc.nc_number),
+            title=str(nc.title),
+            description=str(nc.description),
             severity=nc.severity.value,
             status=nc.status.value,
-            detected_date=nc.detected_date,
-            category=nc.category,
-            detected_location=nc.detected_location,
-            reported_by=nc.reported_by,
-            iso_standard_id=nc.iso_standard_id,
-            iso_clause_number=nc.iso_clause_number,
-            root_cause=nc.root_cause,
-            contributing_factors=nc.contributing_factors,
-            immediate_actions=nc.immediate_actions,
-            ai_analysis=nc.ai_analysis,
-            target_closure_date=nc.target_closure_date,
-            actual_closure_date=nc.actual_closure_date,
-            verified_by=nc.verified_by,
-            verified_at=nc.verified_at.isoformat() if nc.verified_at else None,
-            created_at=nc.created_at.isoformat(),
-            updated_at=nc.updated_at.isoformat()
+            detected_date=nc.detected_date,  # type: ignore
+            category=nc.category,  # type: ignore
+            detected_location=nc.detected_location,  # type: ignore
+            reported_by=str(nc.reported_by),
+            iso_standard_id=nc.iso_standard_id,  # type: ignore
+            iso_clause_number=nc.iso_clause_number,  # type: ignore
+            root_cause=nc.root_cause,  # type: ignore
+            contributing_factors=nc.contributing_factors,  # type: ignore
+            immediate_actions=nc.immediate_actions,  # type: ignore
+            ai_analysis=nc.ai_analysis,  # type: ignore
+            target_closure_date=nc.target_closure_date,  # type: ignore
+            actual_closure_date=nc.actual_closure_date,  # type: ignore
+            verified_by=nc.verified_by,  # type: ignore
+            verified_at=nc.verified_at.isoformat() if nc.verified_at else None,  # type: ignore
+            created_at=nc.created_at.isoformat(),  # type: ignore
+            updated_at=nc.updated_at.isoformat()  # type: ignore
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -473,7 +475,7 @@ async def update_nc_status(
             db=db,
             nc_id=nc_id,
             status=new_status,
-            user_id=current_user.id
+            user_id=str(current_user.id)
         )
         return {"message": "NC status updated", "nc_number": nc.nc_number, "status": nc.status.value}
     except ValueError as e:
@@ -543,16 +545,16 @@ async def create_ca(
         )
         
         return CAResponse(
-            id=ca.id,
-            ca_number=ca.ca_number,
-            title=ca.title,
-            description=ca.description,
+            id=str(ca.id),
+            ca_number=str(ca.ca_number),
+            title=str(ca.title),
+            description=str(ca.description),
             status=ca.status.value,
-            priority=ca.priority,
-            assigned_to=ca.assigned_to,
-            planned_completion_date=ca.planned_completion_date,
-            nc_id=ca.nc_id,
-            created_at=ca.created_at.isoformat()
+            priority=str(ca.priority),
+            assigned_to=str(ca.assigned_to),
+            planned_completion_date=ca.planned_completion_date,  # type: ignore
+            nc_id=ca.nc_id,  # type: ignore
+            created_at=ca.created_at.isoformat()  # type: ignore
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -641,16 +643,16 @@ async def list_cas(
     
     return [
         CAResponse(
-            id=ca.id,
-            ca_number=ca.ca_number,
-            title=ca.title,
-            description=ca.description,
+            id=str(ca.id),
+            ca_number=str(ca.ca_number),
+            title=str(ca.title),
+            description=str(ca.description),
             status=ca.status.value,
-            priority=ca.priority,
-            assigned_to=ca.assigned_to,
-            planned_completion_date=ca.planned_completion_date,
-            nc_id=ca.nc_id,
-            created_at=ca.created_at.isoformat()
+            priority=str(ca.priority),
+            assigned_to=str(ca.assigned_to),
+            planned_completion_date=ca.planned_completion_date,  # type: ignore
+            nc_id=ca.nc_id,  # type: ignore
+            created_at=ca.created_at.isoformat()  # type: ignore
         ) for ca in cas
     ]
 
@@ -673,34 +675,33 @@ async def get_ca(
     
     # Get NC number if linked
     nc_number = None
-    if ca.nc_id:
-        from backend.models.artifact_models import NonConformity
+    if ca.nc_id is not None:  # type: ignore
         nc = db.query(NonConformity).filter(NonConformity.id == ca.nc_id).first()
         if nc:
-            nc_number = nc.nc_number
+            nc_number = str(nc.nc_number)
     
     return CADetailResponse(
-        id=ca.id,
-        ca_number=ca.ca_number,
-        title=ca.title,
-        description=ca.description,
-        action_plan=ca.action_plan,
+        id=str(ca.id),
+        ca_number=str(ca.ca_number),
+        title=str(ca.title),
+        description=str(ca.description),
+        action_plan=str(ca.action_plan),
         status=ca.status.value,
-        priority=ca.priority,
-        assigned_to=ca.assigned_to,
-        nc_id=ca.nc_id,
+        priority=str(ca.priority),
+        assigned_to=str(ca.assigned_to),
+        nc_id=ca.nc_id,  # type: ignore
         nc_number=nc_number,
-        planned_start_date=ca.planned_start_date,
-        planned_completion_date=ca.planned_completion_date,
-        actual_start_date=ca.actual_start_date,
-        actual_completion_date=ca.actual_completion_date,
-        progress_updates=ca.progress_updates,
-        resources_required=ca.resources_required,
-        is_effective=ca.is_effective,
-        effectiveness_results=ca.effectiveness_results,
-        effectiveness_check_date=ca.effectiveness_check_date,
-        created_at=ca.created_at.isoformat(),
-        updated_at=ca.updated_at.isoformat()
+        planned_start_date=ca.planned_start_date,  # type: ignore
+        planned_completion_date=ca.planned_completion_date,  # type: ignore
+        actual_start_date=ca.actual_start_date,  # type: ignore
+        actual_completion_date=ca.actual_completion_date,  # type: ignore
+        progress_updates=ca.progress_updates,  # type: ignore
+        resources_required=ca.resources_required,  # type: ignore
+        is_effective=ca.is_effective,  # type: ignore
+        effectiveness_results=ca.effectiveness_results,  # type: ignore
+        effectiveness_check_date=ca.effectiveness_check_date,  # type: ignore
+        created_at=ca.created_at.isoformat(),  # type: ignore
+        updated_at=ca.updated_at.isoformat()  # type: ignore
     )
 
 
@@ -741,34 +742,33 @@ async def update_ca(
         
         # Get NC number if linked
         nc_number = None
-        if ca.nc_id:
-            from backend.models.artifact_models import NonConformity
+        if ca.nc_id is not None:  # type: ignore
             nc = db.query(NonConformity).filter(NonConformity.id == ca.nc_id).first()
             if nc:
-                nc_number = nc.nc_number
+                nc_number = str(nc.nc_number)
         
         return CADetailResponse(
-            id=ca.id,
-            ca_number=ca.ca_number,
-            title=ca.title,
-            description=ca.description,
-            action_plan=ca.action_plan,
+            id=str(ca.id),
+            ca_number=str(ca.ca_number),
+            title=str(ca.title),
+            description=str(ca.description),
+            action_plan=str(ca.action_plan),
             status=ca.status.value,
-            priority=ca.priority,
-            assigned_to=ca.assigned_to,
-            nc_id=ca.nc_id,
+            priority=str(ca.priority),
+            assigned_to=str(ca.assigned_to),
+            nc_id=ca.nc_id,  # type: ignore
             nc_number=nc_number,
-            planned_start_date=ca.planned_start_date,
-            planned_completion_date=ca.planned_completion_date,
-            actual_start_date=ca.actual_start_date,
-            actual_completion_date=ca.actual_completion_date,
-            progress_updates=ca.progress_updates,
-            resources_required=ca.resources_required,
-            is_effective=ca.is_effective,
-            effectiveness_results=ca.effectiveness_results,
-            effectiveness_check_date=ca.effectiveness_check_date,
-            created_at=ca.created_at.isoformat(),
-            updated_at=ca.updated_at.isoformat()
+            planned_start_date=ca.planned_start_date,  # type: ignore
+            planned_completion_date=ca.planned_completion_date,  # type: ignore
+            actual_start_date=ca.actual_start_date,  # type: ignore
+            actual_completion_date=ca.actual_completion_date,  # type: ignore
+            progress_updates=ca.progress_updates,  # type: ignore
+            resources_required=ca.resources_required,  # type: ignore
+            is_effective=ca.is_effective,  # type: ignore
+            effectiveness_results=ca.effectiveness_results,  # type: ignore
+            effectiveness_check_date=ca.effectiveness_check_date,  # type: ignore
+            created_at=ca.created_at.isoformat(),  # type: ignore
+            updated_at=ca.updated_at.isoformat()  # type: ignore
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -791,21 +791,21 @@ async def create_audit(
             audit_type=request.audit_type,
             scope_description=request.scope_description,
             planned_date=request.planned_date,
-            lead_auditor=current_user.id,
+            lead_auditor=str(current_user.id),
             iso_standard_id=request.iso_standard_id
         )
         
         return AuditResponse(
-            id=audit.id,
-            audit_number=audit.audit_number,
-            title=audit.title,
+            id=str(audit.id),
+            audit_number=str(audit.audit_number),
+            title=str(audit.title),
             audit_type=audit.audit_type.value,
             status=audit.status.value,
-            planned_date=audit.planned_date,
-            lead_auditor=audit.lead_auditor,
-            major_findings=audit.major_findings,
-            minor_findings=audit.minor_findings,
-            created_at=audit.created_at.isoformat()
+            planned_date=audit.planned_date,  # type: ignore
+            lead_auditor=str(audit.lead_auditor),
+            major_findings=int(audit.major_findings),  # type: ignore
+            minor_findings=int(audit.minor_findings),  # type: ignore
+            created_at=audit.created_at.isoformat()  # type: ignore
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -879,16 +879,16 @@ async def list_audits(
     
     return [
         AuditResponse(
-            id=audit.id,
-            audit_number=audit.audit_number,
-            title=audit.title,
+            id=str(audit.id),
+            audit_number=str(audit.audit_number),
+            title=str(audit.title),
             audit_type=audit.audit_type.value,
             status=audit.status.value,
-            planned_date=audit.planned_date,
-            lead_auditor=audit.lead_auditor,
-            major_findings=audit.major_findings,
-            minor_findings=audit.minor_findings,
-            created_at=audit.created_at.isoformat()
+            planned_date=audit.planned_date,  # type: ignore
+            lead_auditor=str(audit.lead_auditor),
+            major_findings=int(audit.major_findings),  # type: ignore
+            minor_findings=int(audit.minor_findings),  # type: ignore
+            created_at=audit.created_at.isoformat()  # type: ignore
         ) for audit in audits
     ]
 
@@ -910,25 +910,25 @@ async def get_audit(
         raise HTTPException(status_code=404, detail="Audit not found")
     
     return AuditDetailResponse(
-        id=audit.id,
-        audit_number=audit.audit_number,
-        title=audit.title,
+        id=str(audit.id),
+        audit_number=str(audit.audit_number),
+        title=str(audit.title),
         audit_type=audit.audit_type.value,
         status=audit.status.value,
-        scope_description=audit.scope_description,
-        planned_date=audit.planned_date,
-        actual_date=audit.actual_date,
-        lead_auditor=audit.lead_auditor,
-        team_members=audit.team_members,
-        major_findings=audit.major_findings,
-        minor_findings=audit.minor_findings,
-        observations=audit.observations,
-        findings_summary=audit.findings_summary,
-        recommendations=audit.recommendations,
-        follow_up_required=audit.follow_up_required,
-        iso_standard_id=audit.iso_standard_id,
-        created_at=audit.created_at.isoformat(),
-        updated_at=audit.updated_at.isoformat()
+        scope_description=str(audit.scope_description),
+        planned_date=audit.planned_date,  # type: ignore
+        actual_date=audit.actual_date,  # type: ignore
+        lead_auditor=str(audit.lead_auditor),
+        team_members=audit.team_members,  # type: ignore
+        major_findings=int(audit.major_findings),  # type: ignore
+        minor_findings=int(audit.minor_findings),  # type: ignore
+        observations=int(audit.observations),  # type: ignore
+        findings_summary=audit.findings_summary,  # type: ignore
+        recommendations=audit.recommendations,  # type: ignore
+        follow_up_required=bool(audit.follow_up_required),  # type: ignore
+        iso_standard_id=audit.iso_standard_id,  # type: ignore
+        created_at=audit.created_at.isoformat(),  # type: ignore
+        updated_at=audit.updated_at.isoformat()  # type: ignore
     )
 
 
@@ -962,25 +962,25 @@ async def update_audit(
         )
         
         return AuditDetailResponse(
-            id=audit.id,
-            audit_number=audit.audit_number,
-            title=audit.title,
+            id=str(audit.id),
+            audit_number=str(audit.audit_number),
+            title=str(audit.title),
             audit_type=audit.audit_type.value,
             status=audit.status.value,
-            scope_description=audit.scope_description,
-            planned_date=audit.planned_date,
-            actual_date=audit.actual_date,
-            lead_auditor=audit.lead_auditor,
-            team_members=audit.team_members,
-            major_findings=audit.major_findings,
-            minor_findings=audit.minor_findings,
-            observations=audit.observations,
-            findings_summary=audit.findings_summary,
-            recommendations=audit.recommendations,
-            follow_up_required=audit.follow_up_required,
-            iso_standard_id=audit.iso_standard_id,
-            created_at=audit.created_at.isoformat(),
-            updated_at=audit.updated_at.isoformat()
+            scope_description=str(audit.scope_description),
+            planned_date=audit.planned_date,  # type: ignore
+            actual_date=audit.actual_date,  # type: ignore
+            lead_auditor=str(audit.lead_auditor),
+            team_members=audit.team_members,  # type: ignore
+            major_findings=int(audit.major_findings),  # type: ignore
+            minor_findings=int(audit.minor_findings),  # type: ignore
+            observations=int(audit.observations),  # type: ignore
+            findings_summary=audit.findings_summary,  # type: ignore
+            recommendations=audit.recommendations,  # type: ignore
+            follow_up_required=bool(audit.follow_up_required),  # type: ignore
+            iso_standard_id=audit.iso_standard_id,  # type: ignore
+            created_at=audit.created_at.isoformat(),  # type: ignore
+            updated_at=audit.updated_at.isoformat()  # type: ignore
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -1090,7 +1090,7 @@ async def create_management_review(
         decisions=request.decisions,
         action_items=request.action_items,
         next_review_date=datetime.combine(request.next_review_date, datetime.min.time()) if request.next_review_date else None,
-        created_by=current_user.id
+        created_by=str(current_user.id)
     )
     return review
 
@@ -1129,17 +1129,17 @@ async def get_management_review(
         raise HTTPException(status_code=404, detail="Management Review not found")
     
     return ManagementReviewDetailResponse(
-        id=review.id,
-        review_number=review.review_number,
-        review_date=review.review_date,
-        attendees=review.attendees,
-        agenda=review.agenda,
-        minutes=review.minutes,
-        decisions=review.decisions,
-        action_items=review.action_items,
-        next_review_date=review.next_review_date,
-        created_at=review.created_at.isoformat(),
-        updated_at=review.updated_at.isoformat()
+        id=str(review.id),
+        review_number=str(review.review_number),
+        review_date=review.review_date,  # type: ignore
+        attendees=review.attendees,  # type: ignore
+        agenda=review.agenda,  # type: ignore
+        minutes=review.minutes,  # type: ignore
+        decisions=review.decisions,  # type: ignore
+        action_items=review.action_items,  # type: ignore
+        next_review_date=review.next_review_date,  # type: ignore
+        created_at=review.created_at.isoformat(),  # type: ignore
+        updated_at=review.updated_at.isoformat()  # type: ignore
     )
 
 
@@ -1177,17 +1177,17 @@ async def update_management_review(
         )
         
         return ManagementReviewDetailResponse(
-            id=review.id,
-            review_number=review.review_number,
-            review_date=review.review_date,
-            attendees=review.attendees,
-            agenda=review.agenda,
-            minutes=review.minutes,
-            decisions=review.decisions,
-            action_items=review.action_items,
-            next_review_date=review.next_review_date,
-            created_at=review.created_at.isoformat(),
-            updated_at=review.updated_at.isoformat()
+            id=str(review.id),
+            review_number=str(review.review_number),
+            review_date=review.review_date,  # type: ignore
+            attendees=review.attendees,  # type: ignore
+            agenda=review.agenda,  # type: ignore
+            minutes=review.minutes,  # type: ignore
+            decisions=review.decisions,  # type: ignore
+            action_items=review.action_items,  # type: ignore
+            next_review_date=review.next_review_date,  # type: ignore
+            created_at=review.created_at.isoformat(),  # type: ignore
+            updated_at=review.updated_at.isoformat()  # type: ignore
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -1286,7 +1286,7 @@ async def create_training_record(
         certificate_number=request.certificate_number,
         expiry_date=datetime.combine(request.expiry_date, datetime.min.time()) if request.expiry_date else None,
         notes=request.notes,
-        created_by=current_user.id
+        created_by=str(current_user.id)
     )
     return record
 
@@ -1327,22 +1327,22 @@ async def get_training_record(
         raise HTTPException(status_code=404, detail="Training Record not found")
     
     return TrainingRecordDetailResponse(
-        id=training.id,
-        record_number=training.record_number,
-        employee_id=training.employee_id,
-        training_title=training.training_title,
-        training_date=training.training_date,
-        trainer_name=training.trainer_name,
-        training_hours=training.training_hours,
-        training_type=training.training_type,
-        competency_area=training.competency_area,
-        passed=training.passed,
-        score=training.score,
-        certificate_number=training.certificate_number,
-        expiry_date=training.expiry_date,
-        notes=training.notes,
-        created_at=training.created_at.isoformat(),
-        updated_at=training.updated_at.isoformat()
+        id=str(training.id),
+        record_number=str(training.record_number),
+        employee_id=str(training.employee_id),
+        training_title=str(training.training_title),
+        training_date=training.training_date,  # type: ignore
+        trainer_name=training.trainer_name,  # type: ignore
+        training_hours=training.training_hours,  # type: ignore
+        training_type=training.training_type,  # type: ignore
+        competency_area=training.competency_area,  # type: ignore
+        passed=bool(training.passed),  # type: ignore
+        score=training.score,  # type: ignore
+        certificate_number=training.certificate_number,  # type: ignore
+        expiry_date=training.expiry_date,  # type: ignore
+        notes=training.notes,  # type: ignore
+        created_at=training.created_at.isoformat(),  # type: ignore
+        updated_at=training.updated_at.isoformat()  # type: ignore
     )
 
 
@@ -1390,22 +1390,22 @@ async def update_training_record(
         )
         
         return TrainingRecordDetailResponse(
-            id=training.id,
-            record_number=training.record_number,
-            employee_id=training.employee_id,
-            training_title=training.training_title,
-            training_date=training.training_date,
-            trainer_name=training.trainer_name,
-            training_hours=training.training_hours,
-            training_type=training.training_type,
-            competency_area=training.competency_area,
-            passed=training.passed,
-            score=training.score,
-            certificate_number=training.certificate_number,
-            expiry_date=training.expiry_date,
-            notes=training.notes,
-            created_at=training.created_at.isoformat(),
-            updated_at=training.updated_at.isoformat()
+            id=str(training.id),
+            record_number=str(training.record_number),
+            employee_id=str(training.employee_id),
+            training_title=str(training.training_title),
+            training_date=training.training_date,  # type: ignore
+            trainer_name=training.trainer_name,  # type: ignore
+            training_hours=training.training_hours,  # type: ignore
+            training_type=training.training_type,  # type: ignore
+            competency_area=training.competency_area,  # type: ignore
+            passed=bool(training.passed),  # type: ignore
+            score=training.score,  # type: ignore
+            certificate_number=training.certificate_number,  # type: ignore
+            expiry_date=training.expiry_date,  # type: ignore
+            notes=training.notes,  # type: ignore
+            created_at=training.created_at.isoformat(),  # type: ignore
+            updated_at=training.updated_at.isoformat()  # type: ignore
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -1496,7 +1496,7 @@ async def create_customer_complaint(
         priority=request.priority,
         assigned_to=request.assigned_to,
         resolution_target_date=datetime.combine(request.resolution_target_date, datetime.min.time()) if request.resolution_target_date else None,
-        created_by=current_user.id
+        created_by=str(current_user.id)
     )
     return complaint
 
@@ -1537,25 +1537,25 @@ async def get_customer_complaint(
         raise HTTPException(status_code=404, detail="Customer Complaint not found")
     
     return CustomerComplaintDetailResponse(
-        id=complaint.id,
-        complaint_number=complaint.complaint_number,
-        complaint_title=complaint.complaint_title,
-        complaint_description=complaint.complaint_description,
-        customer_name=complaint.customer_name,
-        received_date=complaint.received_date,
-        complaint_source=complaint.complaint_source,
-        product_service=complaint.product_service,
-        status=complaint.status,
-        priority=complaint.priority,
-        assigned_to=complaint.assigned_to,
-        root_cause=complaint.root_cause,
-        resolution=complaint.resolution,
-        resolution_date=complaint.resolution_date,
-        resolution_target_date=complaint.resolution_target_date,
-        customer_feedback=complaint.customer_feedback,
-        preventive_measures=complaint.preventive_measures,
-        created_at=complaint.created_at.isoformat(),
-        updated_at=complaint.updated_at.isoformat()
+        id=str(complaint.id),
+        complaint_number=str(complaint.complaint_number),
+        complaint_title=str(complaint.complaint_title),
+        complaint_description=str(complaint.complaint_description),
+        customer_name=str(complaint.customer_name),
+        received_date=complaint.received_date,  # type: ignore
+        complaint_source=str(complaint.complaint_source),
+        product_service=complaint.product_service,  # type: ignore
+        status=str(complaint.status),
+        priority=str(complaint.priority),
+        assigned_to=complaint.assigned_to,  # type: ignore
+        root_cause=complaint.root_cause,  # type: ignore
+        resolution=complaint.resolution,  # type: ignore
+        resolution_date=complaint.resolution_date,  # type: ignore
+        resolution_target_date=complaint.resolution_target_date,  # type: ignore
+        customer_feedback=complaint.customer_feedback,  # type: ignore
+        preventive_measures=complaint.preventive_measures,  # type: ignore
+        created_at=complaint.created_at.isoformat(),  # type: ignore
+        updated_at=complaint.updated_at.isoformat()  # type: ignore
     )
 
 
@@ -1597,25 +1597,25 @@ async def update_customer_complaint(
         )
         
         return CustomerComplaintDetailResponse(
-            id=complaint.id,
-            complaint_number=complaint.complaint_number,
-            complaint_title=complaint.complaint_title,
-            complaint_description=complaint.complaint_description,
-            customer_name=complaint.customer_name,
-            received_date=complaint.received_date,
-            complaint_source=complaint.complaint_source,
-            product_service=complaint.product_service,
-            status=complaint.status,
-            priority=complaint.priority,
-            assigned_to=complaint.assigned_to,
-            root_cause=complaint.root_cause,
-            resolution=complaint.resolution,
-            resolution_date=complaint.resolution_date,
-            resolution_target_date=complaint.resolution_target_date,
-            customer_feedback=complaint.customer_feedback,
-            preventive_measures=complaint.preventive_measures,
-            created_at=complaint.created_at.isoformat(),
-            updated_at=complaint.updated_at.isoformat()
+            id=str(complaint.id),
+            complaint_number=str(complaint.complaint_number),
+            complaint_title=str(complaint.complaint_title),
+            complaint_description=str(complaint.complaint_description),
+            customer_name=str(complaint.customer_name),
+            received_date=complaint.received_date,  # type: ignore
+            complaint_source=str(complaint.complaint_source),
+            product_service=complaint.product_service,  # type: ignore
+            status=str(complaint.status),
+            priority=str(complaint.priority),
+            assigned_to=complaint.assigned_to,  # type: ignore
+            root_cause=complaint.root_cause,  # type: ignore
+            resolution=complaint.resolution,  # type: ignore
+            resolution_date=complaint.resolution_date,  # type: ignore
+            resolution_target_date=complaint.resolution_target_date,  # type: ignore
+            customer_feedback=complaint.customer_feedback,  # type: ignore
+            preventive_measures=complaint.preventive_measures,  # type: ignore
+            created_at=complaint.created_at.isoformat(),  # type: ignore
+            updated_at=complaint.updated_at.isoformat()  # type: ignore
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -1975,47 +1975,47 @@ def get_cost_summary(
     
     return {
         'non_conformities': {
-            'count': nc_cost.count,
-            'potential_cost': float(nc_cost.total),
-            'avg_cost': float(nc_cost.total / nc_cost.count) if nc_cost.count > 0 else 0
+            'count': nc_cost.count,  # type: ignore
+            'potential_cost': float(nc_cost.total),  # type: ignore
+            'avg_cost': float(nc_cost.total / nc_cost.count) if nc_cost.count > 0 else 0  # type: ignore
         },
         'corrective_actions': {
-            'count': ca_costs.count,
-            'estimated_cost': float(ca_costs.estimated),
-            'actual_cost': float(ca_costs.actual),
-            'variance': float(ca_costs.actual - ca_costs.estimated),
-            'estimated_hours': float(ca_costs.est_hours),
-            'actual_hours': float(ca_costs.act_hours)
+            'count': ca_costs.count,  # type: ignore
+            'estimated_cost': float(ca_costs.estimated),  # type: ignore
+            'actual_cost': float(ca_costs.actual),  # type: ignore
+            'variance': float(ca_costs.actual - ca_costs.estimated),  # type: ignore
+            'estimated_hours': float(ca_costs.est_hours),  # type: ignore
+            'actual_hours': float(ca_costs.act_hours)  # type: ignore
         },
         'audits': {
-            'count': audit_costs.count,
-            'estimated_cost': float(audit_costs.estimated),
-            'actual_cost': float(audit_costs.actual),
-            'variance': float(audit_costs.actual - audit_costs.estimated),
-            'auditor_hours': float(audit_costs.hours)
+            'count': audit_costs.count,  # type: ignore
+            'estimated_cost': float(audit_costs.estimated),  # type: ignore
+            'actual_cost': float(audit_costs.actual),  # type: ignore
+            'variance': float(audit_costs.actual - audit_costs.estimated),  # type: ignore
+            'auditor_hours': float(audit_costs.hours)  # type: ignore
         },
         'management_reviews': {
-            'count': mr_costs.count,
-            'meeting_cost': float(mr_costs.cost),
-            'preparation_hours': float(mr_costs.hours)
+            'count': mr_costs.count,  # type: ignore
+            'meeting_cost': float(mr_costs.cost),  # type: ignore
+            'preparation_hours': float(mr_costs.hours)  # type: ignore
         },
         'training': {
-            'count': training_costs.count,
-            'total_cost': float(training_costs.total),
-            'instructor_fees': float(training_costs.instructor),
-            'material_costs': float(training_costs.materials),
-            'venue_costs': float(training_costs.venue)
+            'count': training_costs.count,  # type: ignore
+            'total_cost': float(training_costs.total),  # type: ignore
+            'instructor_fees': float(training_costs.instructor),  # type: ignore
+            'material_costs': float(training_costs.materials),  # type: ignore
+            'venue_costs': float(training_costs.venue)  # type: ignore
         },
         'complaints': {
-            'count': complaint_costs.count,
-            'resolution_cost': float(complaint_costs.resolution),
-            'compensation_amount': float(complaint_costs.compensation),
-            'investigation_hours': float(complaint_costs.hours)
+            'count': complaint_costs.count,  # type: ignore
+            'resolution_cost': float(complaint_costs.resolution),  # type: ignore
+            'compensation_amount': float(complaint_costs.compensation),  # type: ignore
+            'investigation_hours': float(complaint_costs.hours)  # type: ignore
         },
         'totals': {
-            'estimated': float(ca_costs.estimated + audit_costs.estimated),
-            'actual': float(ca_costs.actual + audit_costs.actual + mr_costs.cost + training_costs.total + complaint_costs.resolution + complaint_costs.compensation),
-            'potential_nc': float(nc_cost.total)
+            'estimated': float(ca_costs.estimated + audit_costs.estimated),  # type: ignore
+            'actual': float(ca_costs.actual + audit_costs.actual + mr_costs.cost + training_costs.total + complaint_costs.resolution + complaint_costs.compensation),  # type: ignore
+            'potential_nc': float(nc_cost.total)  # type: ignore
         }
     }
 
@@ -2127,25 +2127,25 @@ def get_budget_tracking(
     
     return {
         'corrective_actions': {
-            'estimated': float(ca_budget.estimated),
-            'actual': float(ca_budget.actual),
-            'variance': float(ca_budget.actual - ca_budget.estimated),
-            'variance_percent': round((ca_budget.actual - ca_budget.estimated) / ca_budget.estimated * 100, 1) if ca_budget.estimated > 0 else 0,
-            'over_budget_count': ca_budget.over_budget,
-            'on_budget_count': ca_budget.on_budget
+            'estimated': float(ca_budget.estimated),  # type: ignore
+            'actual': float(ca_budget.actual),  # type: ignore
+            'variance': float(ca_budget.actual - ca_budget.estimated),  # type: ignore
+            'variance_percent': round((ca_budget.actual - ca_budget.estimated) / ca_budget.estimated * 100, 1) if ca_budget.estimated > 0 else 0,  # type: ignore
+            'over_budget_count': ca_budget.over_budget,  # type: ignore
+            'on_budget_count': ca_budget.on_budget  # type: ignore
         },
         'audits': {
-            'estimated': float(audit_budget.estimated),
-            'actual': float(audit_budget.actual),
-            'variance': float(audit_budget.actual - audit_budget.estimated),
-            'variance_percent': round((audit_budget.actual - audit_budget.estimated) / audit_budget.estimated * 100, 1) if audit_budget.estimated > 0 else 0,
-            'over_budget_count': audit_budget.over_budget,
-            'on_budget_count': audit_budget.on_budget
+            'estimated': float(audit_budget.estimated),  # type: ignore
+            'actual': float(audit_budget.actual),  # type: ignore
+            'variance': float(audit_budget.actual - audit_budget.estimated),  # type: ignore
+            'variance_percent': round((audit_budget.actual - audit_budget.estimated) / audit_budget.estimated * 100, 1) if audit_budget.estimated > 0 else 0,  # type: ignore
+            'over_budget_count': audit_budget.over_budget,  # type: ignore
+            'on_budget_count': audit_budget.on_budget  # type: ignore
         },
         'overall': {
-            'total_estimated': float(ca_budget.estimated + audit_budget.estimated),
-            'total_actual': float(ca_budget.actual + audit_budget.actual),
-            'total_variance': float((ca_budget.actual + audit_budget.actual) - (ca_budget.estimated + audit_budget.estimated))
+            'total_estimated': float(ca_budget.estimated + audit_budget.estimated),  # type: ignore
+            'total_actual': float(ca_budget.actual + audit_budget.actual),  # type: ignore
+            'total_variance': float((ca_budget.actual + audit_budget.actual) - (ca_budget.estimated + audit_budget.estimated))  # type: ignore
         }
     }
 
