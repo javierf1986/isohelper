@@ -1,27 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { locales, localeNames, type Locale } from '@/i18n/config';
 
 export function LanguageSelector() {
   const router = useRouter();
-  const pathname = usePathname();
   const currentLocaleCode = useLocale() as Locale;
   const [isOpen, setIsOpen] = useState(false);
 
   const currentLanguage = localeNames[currentLocaleCode] || localeNames.en;
 
   const handleLanguageChange = (newLocale: Locale) => {
-    // If current locale is in the pathname, replace it
-    if (pathname.startsWith(`/${currentLocaleCode}`)) {
-      const newPath = pathname.replace(`/${currentLocaleCode}`, `/${newLocale}`);
-      router.push(newPath);
-    } else {
-      // Default locale doesn't have prefix, so prepend new locale
-      router.push(`/${newLocale}${pathname}`);
-    }
+    // Store locale preference in cookie
+    document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000`;
+    
+    // Reload the page to apply new locale (stay on current URL)
+    window.location.reload();
+    
     setIsOpen(false);
   };
 

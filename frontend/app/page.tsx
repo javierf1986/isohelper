@@ -3,11 +3,23 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function Home() {
   const router = useRouter();
+  const t = useTranslations();
+  const locale = useLocale();
   const { isAuthenticated, checkAuth, isLoading } = useAuthStore();
+
+  // Debug: Log current locale
+  useEffect(() => {
+    console.log('Current locale:', locale);
+    console.log('Current translations:', {
+      register: t('auth.register'),
+      login: t('auth.login')
+    });
+  }, [t, locale]);
 
   useEffect(() => {
     checkAuth();
@@ -46,13 +58,13 @@ export default function Home() {
               href="/register"
               className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-lg shadow-lg"
             >
-              Get Started
+              {t('auth.register')}
             </Link>
             <Link
               href="/login"
               className="px-8 py-3 bg-white text-blue-600 rounded-lg hover:bg-gray-50 transition-colors font-medium text-lg shadow-lg border-2 border-blue-600"
             >
-              Sign In
+              {t('auth.login')}
             </Link>
           </div>
         </div>
@@ -61,6 +73,11 @@ export default function Home() {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-full">
             <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
             <span className="text-sm font-medium">Backend API Live</span>
+          </div>
+          
+          {/* Debug: Show current locale */}
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full">
+            <span className="text-sm font-medium">Current Locale: {locale}</span>
           </div>
         </div>
       </div>

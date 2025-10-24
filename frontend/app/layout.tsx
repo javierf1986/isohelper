@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { QueryProvider } from "@/lib/query-client";
+import { cookies } from 'next/headers';
+import { locales, defaultLocale, type Locale } from '@/i18n/config';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,13 +24,18 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({
   children,
-  params,
 }: Readonly<{
   children: React.ReactNode;
-  params: { locale?: string };
 }>) {
-  // Get locale from params or default to 'en'
-  const locale = params?.locale || 'en';
+  // Get locale from cookie or use default
+  const cookieStore = await cookies();
+  const localeCookie = cookieStore.get('NEXT_LOCALE')?.value;
+  const locale: Locale = (localeCookie && locales.includes(localeCookie as Locale)) 
+    ? (localeCookie as Locale) 
+    : defaultLocale;
+  
+  // Debug log
+  console.log('[Layout] Using locale:', locale, 'from cookie:', localeCookie);
   
   // Get messages for the current locale
   const messages = await getMessages({ locale });

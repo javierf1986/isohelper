@@ -6,12 +6,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useAuthStore } from '@/store/auth-store';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { LanguageSelector } from '@/components/LanguageSelector';
 
 function DashboardContent() {
   const router = useRouter();
+  const t = useTranslations();
   const { user, logout } = useAuthStore();
 
   const handleLogout = async () => {
@@ -38,7 +40,7 @@ function DashboardContent() {
               onClick={handleLogout}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
             >
-              Logout
+              {t('auth.logout')}
             </button>
           </div>
         </div>
