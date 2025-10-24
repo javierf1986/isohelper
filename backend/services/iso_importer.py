@@ -171,6 +171,26 @@ class ISOTextExtractor:
         # Remove page markers but keep line structure
         text = re.sub(r'--- Page \d+ ---\s*', '', text)
         
+        # Remove table of contents entries (lines with dots leading to page numbers)
+        # e.g., "4.1 Context..................... 12"
+        text = re.sub(r'^.+?\.{3,}\s*\d+\s*$', '', text, flags=re.MULTILINE)
+        
+        # Remove figure captions and references
+        text = re.sub(r'^\s*Figura\s+\d+\s*[—–-].*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+        text = re.sub(r'^\s*Figure\s+\d+\s*[—–-].*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+        text = re.sub(r'^\s*Tabla\s+\d+\s*[—–-].*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+        text = re.sub(r'^\s*Table\s+\d+\s*[—–-].*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+        text = re.sub(r'\(véase\s+[Ff]igura\s+\d+\)', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'\(see\s+[Ff]igure\s+\d+\)', '', text, flags=re.IGNORECASE)
+        
+        # Remove annex headers and references
+        text = re.sub(r'^\s*Anexo\s+[A-Z]\s+\(.*?\).*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+        text = re.sub(r'^\s*Annex\s+[A-Z]\s+\(.*?\).*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+        
+        # Remove bibliography references
+        text = re.sub(r'^\s*Bibliograf[ií]a\s*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+        text = re.sub(r'^\s*Bibliography\s*$', '', text, flags=re.MULTILINE | re.IGNORECASE)
+        
         # Fix hyphenated words split across lines (e.g., "conside-\nraciones" -> "consideraciones")
         text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
         
@@ -319,12 +339,25 @@ class ISOClauseDetector:
             clause_number = match.group(1)
             clause_title = match.group(2).strip()
             
+            # Skip if clause number looks like it's from a table or list (too many dots)
+            if clause_number.count('.') > 4:
+                continue
+            
+            # Skip if it's just a number without proper formatting
+            if len(clause_number) == 1 and not clause_title:
+                continue
+            
             # Clean up the clause title
             clause_title = self._clean_clause_title(clause_title)
             
             # Skip if title is too short or looks like junk
             if len(clause_title) < 3 or self._is_junk_clause(clause_title):
                 continue
+            
+            # Skip if title is all uppercase and short (likely a section header, not a clause)
+            if len(clause_title) < 30 and clause_title.isupper() and clause_number in ['1', '2', '3']:
+                # Allow it - main sections can be uppercase
+                pass
             
             # Get clause content (text between this header and next header)
             start_pos = match.end()
@@ -334,8 +367,14 @@ class ISOClauseDetector:
             # Clean the content
             content = self._clean_clause_content(content)
             
-            # Skip if content is empty or too short
-            if len(content) < 10:
+            # Skip if content is empty or too short (likely not a real clause)
+            if len(content) < 20:
+                continue
+            
+            # Skip if content looks like table data (lots of numbers, minimal text)
+            words = re.findall(r'\b[a-záéíóúñA-ZÁÉÍÓÚÑ]{3,}\b', content)
+            numbers = re.findall(r'\b\d+\b', content)
+            if len(numbers) > len(words) * 2:  # More than 2x as many numbers as words
                 continue
             
             # Determine clause type
@@ -390,15 +429,40 @@ class ISOClauseDetector:
         return title.strip()
     
     def _clean_clause_content(self, content: str) -> str:
-        """Clean clause content by removing headers, footers, and junk"""
+        """Clean clause content by removing headers, footers, tables, and junk"""
         # Remove copyright notices
         content = re.sub(r'©\s*ISO\s*\d{4}[^\n]*\n?', '', content, flags=re.IGNORECASE)
         content = re.sub(r'ISO\s*\d+:\d{4}\s*\(traducción oficial\)[^\n]*\n?', '', content, flags=re.IGNORECASE)
         content = re.sub(r'PDF\s*[–-]\s*Exoneración[^\n]+\n?', '', content, flags=re.IGNORECASE)
         content = re.sub(r'Traducción oficial/Official translation[^\n]*\n?', '', content, flags=re.IGNORECASE)
         
+        # Remove figure and table references
+        content = re.sub(r'^\s*Figura\s+\d+\s*[—–-].*$', '', content, flags=re.MULTILINE | re.IGNORECASE)
+        content = re.sub(r'^\s*Figure\s+\d+\s*[—–-].*$', '', content, flags=re.MULTILINE | re.IGNORECASE)
+        content = re.sub(r'^\s*Tabla\s+\d+\s*[—–-].*$', '', content, flags=re.MULTILINE | re.IGNORECASE)
+        content = re.sub(r'^\s*Table\s+\d+\s*[—–-].*$', '', content, flags=re.MULTILINE | re.IGNORECASE)
+        
+        # Remove table of contents entries with dots
+        content = re.sub(r'^.+?\.{3,}\s*\d+\s*$', '', content, flags=re.MULTILINE)
+        
+        # Remove annex headers that might appear in content
+        content = re.sub(r'Anexo\s+[A-Z]\s+\(inform\s*ativo\)[^\n]*\n?', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'Annex\s+[A-Z]\s+\(informative\)[^\n]*\n?', '', content, flags=re.IGNORECASE)
+        
         # Remove standalone page numbers
         content = re.sub(r'^\s*\d{1,3}\s*\n', '', content, flags=re.MULTILINE)
+        
+        # Remove lines that are mostly numbers (likely table data)
+        lines = content.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Count alphanumeric words vs pure numbers
+            words = re.findall(r'\b[a-záéíóúñA-ZÁÉÍÓÚÑ]+\b', line)
+            numbers = re.findall(r'\b\d+\b', line)
+            # Keep line if it has more words than numbers, or at least some words
+            if len(words) > 0 and (len(words) >= len(numbers) or len(line) > 50):
+                cleaned_lines.append(line)
+        content = '\n'.join(cleaned_lines)
         
         # Remove multiple newlines
         content = re.sub(r'\n{3,}', '\n\n', content)
@@ -406,7 +470,7 @@ class ISOClauseDetector:
         return content.strip()
     
     def _is_junk_clause(self, title: str) -> bool:
-        """Check if clause title looks like junk (headers, footers, etc.)"""
+        """Check if clause title looks like junk (headers, footers, tables, figures, etc.)"""
         junk_patterns = [
             r'^©',
             r'traducción oficial',
@@ -417,6 +481,19 @@ class ISOClauseDetector:
             r'exoneración',
             r'disclaimer',
             r'^pdf\b',
+            r'^\s*tabla\s+\d+',  # Table references
+            r'^\s*table\s+\d+',
+            r'^\s*figura\s+\d+',  # Figure references
+            r'^\s*figure\s+\d+',
+            r'^\s*anexo\s+[a-z]',  # Annex headers
+            r'^\s*annex\s+[a-z]',
+            r'^\s*bibliograf',  # Bibliography
+            r'^\s*bibliography',
+            r'\.{3,}',  # Lines with multiple dots (TOC entries)
+            r'^\s*inform\s*ativo',  # Informative annex marker
+            r'^\s*informative',
+            r'^\s*normativo',  # Normative annex marker
+            r'^\s*normative',
         ]
         
         title_lower = title.lower()
