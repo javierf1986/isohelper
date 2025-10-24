@@ -274,22 +274,29 @@ class ISOClauseDetector:
     def __init__(self):
         # Pattern for clause headers: "4.1 Title", "7.5.3.1 Title"
         # Must be at start of line with optional whitespace
+        # Captures only up to first sentence/reasonable title length
         self.clause_header_pattern = re.compile(
-            r'^\s*(\d+(?:\.\d+)*)\s+([^\n]+)',
+            r'^\s*(\d+(?:\.\d+)*)\s+([A-ZÁÉÍÓÚÑ][^\n]{2,150}?)(?:\s+[A-Z][a-záéíóúñ]|\.|$)',
             re.MULTILINE
         )
         
-        # Pattern for "shall" requirements
-        self.requirement_pattern = re.compile(r'\bshall\b', re.IGNORECASE)
+        # Backup pattern if first doesn't work well - captures everything on the line
+        self.clause_header_simple_pattern = re.compile(
+            r'^\s*(\d+(?:\.\d+)*)\s+(.+?)$',
+            re.MULTILINE
+        )
+        
+        # Pattern for "shall" requirements (debe in Spanish, shall in English)
+        self.requirement_pattern = re.compile(r'\b(shall|debe|deben)\b', re.IGNORECASE)
         
         # Pattern for guidance (should, may, can)
-        self.guidance_pattern = re.compile(r'\b(should|may|can|could)\b', re.IGNORECASE)
+        self.guidance_pattern = re.compile(r'\b(should|may|can|could|debería|puede|pueden)\b', re.IGNORECASE)
         
         # Pattern for notes
-        self.note_pattern = re.compile(r'^NOTE\s+\d*:?', re.MULTILINE | re.IGNORECASE)
+        self.note_pattern = re.compile(r'^NOTE\s+\d*:?|^NOTA\s+\d*:?', re.MULTILINE | re.IGNORECASE)
         
         # Pattern for examples
-        self.example_pattern = re.compile(r'^EXAMPLE\s+\d*:?', re.MULTILINE | re.IGNORECASE)
+        self.example_pattern = re.compile(r'^EXAMPLE\s+\d*:?|^EJEMPLO\s+\d*:?', re.MULTILINE | re.IGNORECASE)
     
     def detect_clauses(self, text: str) -> List[ExtractedClause]:
         """
@@ -358,6 +365,20 @@ class ISOClauseDetector:
         """Clean clause title by removing page numbers and junk"""
         # Remove trailing page numbers (e.g., "Title 12" -> "Title")
         title = re.sub(r'\s+\d{1,3}\s*$', '', title)
+        
+        # If title is too long (>150 chars), try to extract just the heading part
+        if len(title) > 150:
+            # Try to find the end of the title (usually before "La organización", "El", "Los", etc.)
+            spanish_content_start = re.search(r'\s+(La organización|El|Los|Las|Una|Un|Este|Esta|Cuando|Para)\s+', title)
+            english_content_start = re.search(r'\s+(The organization|The|This|When|For)\s+', title)
+            
+            if spanish_content_start:
+                title = title[:spanish_content_start.start()].strip()
+            elif english_content_start:
+                title = title[:english_content_start.start()].strip()
+            else:
+                # Just take first 150 characters
+                title = title[:150].strip()
         
         # Remove trailing dots and whitespace
         title = title.rstrip('. ')

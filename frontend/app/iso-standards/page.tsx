@@ -23,6 +23,8 @@ export default function ISOStandardsPage() {
   const [standards, setStandards] = useState<ISOStandard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchStandards();
@@ -43,6 +45,28 @@ export default function ISOStandardsPage() {
       console.error('Error fetching standards:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (standardId: string, standardName: string) => {
+    setDeleting(true);
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/iso-standards/${standardId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setStandards(standards.filter(s => s.id !== standardId));
+      } else {
+        setError(`Failed to delete ${standardName}`);
+      }
+    } catch (err) {
+      setError(`Error deleting ${standardName}`);
+      console.error('Delete error:', err);
+    } finally {
+      setDeleting(false);
+      setDeleteConfirm(null);
     }
   };
 
@@ -152,12 +176,26 @@ export default function ISOStandardsPage() {
                       </svg>
                       <span>{standard.clause_count} clauses</span>
                     </div>
-                    <button
-                      onClick={() => router.push(`/iso-standards/${standard.id}`)}
-                      className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                    >
-                      View Details →
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirm(standard.id);
+                        }}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                        title="Delete standard"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => router.push(`/iso-standards/${standard.id}`)}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                      >
+                        View Details →
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -181,6 +219,39 @@ export default function ISOStandardsPage() {
             </div>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Deletion</h3>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete this ISO standard? 
+                This will permanently remove the standard and all its clauses.
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium disabled:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const standard = standards.find(s => s.id === deleteConfirm);
+                    if (standard) handleDelete(standard.id, standard.name);
+                  }}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium disabled:bg-red-300"
+                >
+                  {deleting ? 'Deleting...' : 'Delete Permanently'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
   );
 }

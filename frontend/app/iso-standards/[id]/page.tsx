@@ -34,6 +34,8 @@ export default function ISOStandardDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedClauses, setExpandedClauses] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (standardId) {
@@ -67,6 +69,30 @@ export default function ISOStandardDetailPage() {
       newExpanded.add(clauseId);
     }
     setExpandedClauses(newExpanded);
+  };
+
+  const handleDelete = async () => {
+    if (!standard) return;
+    
+    setDeleting(true);
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/iso-standards/${standardId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Redirect to standards list after successful deletion
+        router.push('/iso-standards');
+      } else {
+        setError('Failed to delete ISO standard');
+        setDeleting(false);
+      }
+    } catch (err) {
+      setError('Error deleting ISO standard');
+      console.error('Delete error:', err);
+      setDeleting(false);
+    }
+    setShowDeleteConfirm(false);
   };
 
   const getCategoryBadge = (category?: string) => {
@@ -247,7 +273,43 @@ export default function ISOStandardDetailPage() {
           >
             Run Gap Analysis
           </button>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleting}
+            className="ml-auto px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium disabled:bg-red-300 disabled:cursor-not-allowed"
+          >
+            {deleting ? 'Deleting...' : 'Delete Standard'}
+          </button>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Confirm Deletion</h3>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete <strong>{standard?.name}</strong>? 
+                This will permanently remove the standard and all {standard?.clauses.length} clauses.
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium disabled:bg-red-300"
+                >
+                  {deleting ? 'Deleting...' : 'Delete Permanently'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

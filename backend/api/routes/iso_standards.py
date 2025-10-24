@@ -306,11 +306,11 @@ async def upload_iso_standard(
 @router.delete("/{standard_id}")
 async def delete_iso_standard(
     standard_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Delete an ISO standard and all its clauses
+    (Public endpoint for testing - authentication disabled)
     """
     standard = db.query(ISOStandard).filter(ISOStandard.id == standard_id).first()
     
@@ -329,11 +329,11 @@ async def delete_iso_standard(
 @router.patch("/{standard_id}/toggle-active")
 async def toggle_iso_standard_active(
     standard_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     """
     Toggle the active status of an ISO standard
+    (Public endpoint for testing - authentication disabled)
     """
     standard = db.query(ISOStandard).filter(ISOStandard.id == standard_id).first()
     
