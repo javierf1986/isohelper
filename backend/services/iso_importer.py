@@ -292,11 +292,11 @@ class ISOClauseDetector:
     """Detect and parse ISO clause structure"""
     
     def __init__(self):
-        # Pattern for clause headers: "4.1 Title", "7.5.3.1 Title"
-        # Must be at start of line with optional whitespace
-        # Captures only up to first sentence/reasonable title length
+        # Pattern for clause headers: "4.1 Title"
+        # Simpler pattern - just get the clause number and everything up to newline or end
+        # Then we'll intelligently split title from content
         self.clause_header_pattern = re.compile(
-            r'^\s*(\d+(?:\.\d+)*)\s+([A-ZÁÉÍÓÚÑ][^\n]{2,150}?)(?:\s+[A-Z][a-záéíóúñ]|\.|$)',
+            r'^\s*(\d+(?:\.\d+)*)\s+(.+?)$',
             re.MULTILINE
         )
         
@@ -337,15 +337,19 @@ class ISOClauseDetector:
         
         for i, match in enumerate(matches):
             clause_number = match.group(1)
-            clause_title = match.group(2).strip()
+            raw_title_line = match.group(2).strip()
             
             # Skip if clause number looks like it's from a table or list (too many dots)
             if clause_number.count('.') > 4:
                 continue
             
             # Skip if it's just a number without proper formatting
-            if len(clause_number) == 1 and not clause_title:
+            if len(clause_number) == 1 and not raw_title_line:
                 continue
+            
+            # Extract just the title from the line (might have content after it)
+            # Title is usually first few words before content starts
+            clause_title = self._extract_title_from_line(raw_title_line)
             
             # Clean up the clause title
             clause_title = self._clean_clause_title(clause_title)
@@ -360,9 +364,16 @@ class ISOClauseDetector:
                 pass
             
             # Get clause content (text between this header and next header)
-            start_pos = match.end()
+            # Start from beginning of the line after the match
+            start_pos = match.end() + 1  # +1 to skip the newline
             end_pos = matches[i + 1].start() if i + 1 < len(matches) else len(text)
             content = text[start_pos:end_pos].strip()
+            
+            # If title and content were on same line, extract content part from raw_title_line
+            if len(raw_title_line) > len(clause_title) + 10:
+                # There's likely content on the same line after the title
+                content_on_same_line = raw_title_line[len(clause_title):].strip()
+                content = content_on_same_line + '\n' + content if content else content_on_same_line
             
             # Clean the content
             content = self._clean_clause_content(content)
@@ -427,6 +438,50 @@ class ISOClauseDetector:
         title = re.sub(r'traducción oficial.*', '', title, flags=re.IGNORECASE)
         
         return title.strip()
+    
+    def _extract_title_from_line(self, line: str) -> str:
+        """
+        Extract just the title from a line that might contain title + content
+        e.g., "Principios de la gestión Esta Norma..." -> "Principios de la gestión"
+        """
+        # Look for patterns that indicate where title ends and content begins
+        
+        # Pattern 1: Title ends before "La/El/Los/Las/Un/Una/Este/Esta" + verb/noun
+        spanish_markers = [
+            r'\s+(La\s+organización|El\s+ciclo|Los\s+principios|Las\s+descripciones)',
+            r'\s+(Esta\s+Norma|Este\s+documento)',
+            r'\s+(Cuando\s+la|Para\s+los)',
+            r'\s+(debe|deben|puede|pueden|debería)',
+        ]
+        
+        for pattern in spanish_markers:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                return line[:match.start()].strip()
+        
+        # Pattern 2: English markers
+        english_markers = [
+            r'\s+(The\s+organization|The\s+cycle|The\s+principles)',
+            r'\s+(This\s+International|This\s+document)',
+            r'\s+(When\s+the|For\s+the)',
+            r'\s+(shall|should|may|must)',
+        ]
+        
+        for pattern in english_markers:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                return line[:match.start()].strip()
+        
+        # Pattern 3: If line is very long, take first ~80 chars up to a word boundary
+        if len(line) > 120:
+            # Find last space before char 80
+            truncated = line[:80]
+            last_space = truncated.rfind(' ')
+            if last_space > 20:
+                return line[:last_space].strip()
+        
+        # Otherwise, return the whole line as title (will be cleaned further)
+        return line
     
     def _clean_clause_content(self, content: str) -> str:
         """Clean clause content by removing headers, footers, tables, and junk"""
