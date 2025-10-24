@@ -46,7 +46,7 @@ def init_db():
     from backend.models.iso_models import Base
     from backend.models.user_models import User, RefreshToken
     from backend.models.language_models import Language, Translation, UserLanguagePreference, TranslationKey
-    from backend.models.versioning_models import DocumentVersion, ApprovalWorkflow, AuditLog, ChangeRequest
+    from backend.models.version_models import DocumentVersion, ApprovalWorkflow, AuditLog, ChangeRequest
     from backend.models.artifact_models import (
         NonConformity, CorrectiveAction, InternalAudit,
         ManagementReview, TrainingRecord, CustomerComplaint

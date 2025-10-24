@@ -13,7 +13,7 @@ import uuid
 import shutil
 
 from backend.database.database import get_db
-from backend.auth import get_current_user
+from backend.api.dependencies import get_current_user
 from backend.models.gap_models import (
     GapAnalysis, Gap, RoadmapItem, AnalysisStatus, GapSeverity, RoadmapItemStatus
 )

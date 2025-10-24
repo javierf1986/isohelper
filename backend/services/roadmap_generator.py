@@ -4,7 +4,7 @@ Creates implementation roadmaps from gap analysis results
 """
 
 import uuid
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
