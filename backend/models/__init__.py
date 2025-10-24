@@ -11,6 +11,10 @@ from .version_models import (
     DocumentVersion, ApprovalWorkflow, AuditLog, ChangeRequest,
     VersionStatus, ApprovalStatus, ChangeType
 )
+from .gap_models import (
+    GapAnalysis, Gap, ComplianceEvidence, RoadmapItem,
+    AnalysisStatus, GapSeverity, RoadmapItemStatus
+)
 
 __all__ = [
     # Base
@@ -44,4 +48,12 @@ __all__ = [
     "VersionStatus",
     "ApprovalStatus",
     "ChangeType",
+    # Gap Analysis Models
+    "GapAnalysis",
+    "Gap",
+    "ComplianceEvidence",
+    "RoadmapItem",
+    "AnalysisStatus",
+    "GapSeverity",
+    "RoadmapItemStatus",
 ]

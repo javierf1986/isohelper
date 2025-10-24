@@ -1,0 +1,11 @@
+# Gap Analysis Uploads
+
+This directory stores uploaded documents for gap analysis.
+
+## Structure
+- `{workspace_id}/` - Documents organized by workspace
+- Files are named with UUIDs to prevent conflicts
+
+## Cleanup
+- Files are deleted when analysis is deleted
+- Orphaned files can be cleaned up with maintenance script

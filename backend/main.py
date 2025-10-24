@@ -11,7 +11,7 @@ from pathlib import Path
 # Add parent directory to path to import config
 sys.path.append(str(Path(__file__).parent.parent))
 
-from backend.api.routes import documents, templates, compliance, workspaces, auth, export, artifacts, versions
+from backend.api.routes import documents, templates, compliance, workspaces, auth, export, artifacts, versions, gap_analysis
 from backend.database.database import init_db
 from config.settings import settings
 
@@ -53,6 +53,7 @@ app.include_router(workspaces.router, tags=["Workspaces"])
 app.include_router(export.router, tags=["Export"])
 app.include_router(artifacts.router, prefix="/api/v1", tags=["Artifacts"])
 app.include_router(versions.router, tags=["Versions"])
+app.include_router(gap_analysis.router, tags=["Gap Analysis"])
 
 @app.get("/")
 async def root():
