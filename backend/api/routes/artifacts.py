@@ -2239,7 +2239,7 @@ def get_predictions(
     ).group_by('year', 'month').order_by('year', 'month').all()
     
     # Simple moving average for prediction
-    nc_counts = [row.count for row in nc_monthly]
+    nc_counts = [int(row.count) for row in nc_monthly]  # type: ignore
     if len(nc_counts) >= 3:
         avg_trend = sum(nc_counts[-3:]) / 3
         # Linear trend
