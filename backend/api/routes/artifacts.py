@@ -9,9 +9,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import case
 from pydantic import BaseModel
 
-from backend.database.session import get_db
-from backend.services.auth_service import get_current_user
-from backend.models.user import User
+from backend.database.database import get_db
+from backend.api.dependencies import get_current_user
+from backend.models.user_models import User
 from backend.models.artifact_models import (
     NCStatus, NCSeverity, CAStatus, AuditType, AuditStatus
 )

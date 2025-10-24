@@ -1,0 +1,344 @@
+"""
+Pytest Configuration and Fixtures
+Provides reusable test fixtures for database, authentication, and API testing
+"""
+import pytest
+import sys
+from pathlib import Path
+from typing import Generator, Dict, Any
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import StaticPool
+
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+from backend.main import app
+from backend.database.database import Base, get_db
+from backend.models.user_models import User, UserRole
+from backend.models.iso_models import Workspace, ISOStandard
+from backend.services.auth_service import AuthService
+from config.settings import settings
+
+
+# ============================================================================
+# DATABASE FIXTURES
+# ============================================================================
+
+@pytest.fixture(scope="function")
+def test_db() -> Generator[Session, None, None]:
+    """
+    Create a fresh test database for each test function.
+    Uses in-memory SQLite with StaticPool for isolation.
+    """
+    # Create in-memory SQLite database
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+    
+    # Create session
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = TestingSessionLocal()
+    
+    try:
+        yield db
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="function")
+def client(test_db: Session) -> Generator[TestClient, None, None]:
+    """
+    Create a test client with dependency override for database.
+    """
+    def override_get_db():
+        try:
+            yield test_db
+        finally:
+            pass
+    
+    app.dependency_overrides[get_db] = override_get_db
+    
+    with TestClient(app) as test_client:
+        yield test_client
+    
+    app.dependency_overrides.clear()
+
+
+# ============================================================================
+# AUTHENTICATION FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def test_user(test_db: Session) -> User:
+    """
+    Create a test user in the database.
+    Returns user instance with known credentials.
+    """
+    user_data = {
+        "email": "test@example.com",
+        "password": "Test123!@#",
+        "full_name": "Test User"
+    }
+    
+    user = AuthService.create_user(
+        db=test_db,
+        email=user_data["email"],
+        password=user_data["password"],
+        full_name=user_data["full_name"],
+        role=UserRole.USER
+    )
+    
+    # Store original password for later use
+    user._test_password = user_data["password"]
+    
+    return user
+
+
+@pytest.fixture
+def admin_user(test_db: Session) -> User:
+    """
+    Create an admin user in the database.
+    """
+    admin_data = {
+        "email": "admin@example.com",
+        "password": "Admin123!@#",
+        "full_name": "Admin User"
+    }
+    
+    user = AuthService.create_user(
+        db=test_db,
+        email=admin_data["email"],
+        password=admin_data["password"],
+        full_name=admin_data["full_name"],
+        role=UserRole.ADMIN
+    )
+    
+    user._test_password = admin_data["password"]
+    
+    return user
+
+
+@pytest.fixture
+def auth_tokens(test_user: User, test_db: Session) -> Dict[str, str]:
+    """
+    Generate authentication tokens for test user.
+    Returns dict with access_token and refresh_token.
+    """
+    access_token = AuthService.create_access_token(
+        data={"user_id": test_user.id, "email": test_user.email, "role": test_user.role}
+    )
+    refresh_token = AuthService.create_refresh_token(test_db, test_user.id)
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token
+    }
+
+
+@pytest.fixture
+def admin_tokens(admin_user: User, test_db: Session) -> Dict[str, str]:
+    """
+    Generate authentication tokens for admin user.
+    """
+    access_token = AuthService.create_access_token(
+        data={"user_id": admin_user.id, "email": admin_user.email, "role": admin_user.role}
+    )
+    refresh_token = AuthService.create_refresh_token(test_db, admin_user.id)
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token
+    }
+
+
+@pytest.fixture
+def auth_headers(auth_tokens: Dict[str, str]) -> Dict[str, str]:
+    """
+    Create authorization headers for authenticated requests.
+    """
+    return {
+        "Authorization": f"Bearer {auth_tokens['access_token']}",
+        "Content-Type": "application/json"
+    }
+
+
+@pytest.fixture
+def admin_headers(admin_tokens: Dict[str, str]) -> Dict[str, str]:
+    """
+    Create authorization headers for admin requests.
+    """
+    return {
+        "Authorization": f"Bearer {admin_tokens['access_token']}",
+        "Content-Type": "application/json"
+    }
+
+
+# ============================================================================
+# WORKSPACE FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def test_workspace(test_db: Session, test_user: User) -> Workspace:
+    """
+    Create a test workspace owned by test_user.
+    """
+    workspace = Workspace(
+        name="Test Workspace",
+        description="A workspace for testing",
+        owner_id=test_user.id
+    )
+    test_db.add(workspace)
+    test_db.commit()
+    test_db.refresh(workspace)
+    
+    return workspace
+
+
+@pytest.fixture
+def multiple_workspaces(test_db: Session, test_user: User) -> list[Workspace]:
+    """
+    Create multiple test workspaces.
+    """
+    workspaces = []
+    for i in range(3):
+        workspace = Workspace(
+            name=f"Test Workspace {i+1}",
+            description=f"Test workspace number {i+1}",
+            owner_id=test_user.id
+        )
+        test_db.add(workspace)
+        workspaces.append(workspace)
+    
+    test_db.commit()
+    for ws in workspaces:
+        test_db.refresh(ws)
+    
+    return workspaces
+
+
+# ============================================================================
+# ISO STANDARD FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def iso9001_standard(test_db: Session) -> ISOStandard:
+    """
+    Create ISO 9001 standard in test database.
+    """
+    standard = ISOStandard(
+        code="ISO9001",
+        title="Quality Management Systems",
+        version="2015",
+        description="Quality management system requirements"
+    )
+    test_db.add(standard)
+    test_db.commit()
+    test_db.refresh(standard)
+    
+    return standard
+
+
+@pytest.fixture
+def multiple_iso_standards(test_db: Session) -> list[ISOStandard]:
+    """
+    Create multiple ISO standards for testing.
+    """
+    standards_data = [
+        {"code": "ISO9001", "title": "Quality Management Systems", "version": "2015"},
+        {"code": "ISO14001", "title": "Environmental Management", "version": "2015"},
+        {"code": "ISO27001", "title": "Information Security Management", "version": "2022"},
+    ]
+    
+    standards = []
+    for data in standards_data:
+        standard = ISOStandard(**data)
+        test_db.add(standard)
+        standards.append(standard)
+    
+    test_db.commit()
+    for std in standards:
+        test_db.refresh(std)
+    
+    return standards
+
+
+# ============================================================================
+# DATA FIXTURES
+# ============================================================================
+
+@pytest.fixture
+def sample_company_data() -> Dict[str, Any]:
+    """
+    Sample company data for document generation testing.
+    """
+    return {
+        "company_name": "Test Industries Inc",
+        "industry": "manufacturing",
+        "company_size": "medium",
+        "custom_context": "We specialize in automotive components"
+    }
+
+
+@pytest.fixture
+def sample_document_request() -> Dict[str, Any]:
+    """
+    Sample document generation request data.
+    """
+    return {
+        "company_name": "Test Corp",
+        "industry": "technology",
+        "company_size": "large",
+        "clauses": ["4.1", "4.2", "5.1"],
+        "language": "en",
+        "custom_context": "Cloud-based software solutions"
+    }
+
+
+# ============================================================================
+# UTILITY FIXTURES
+# ============================================================================
+
+@pytest.fixture(autouse=True)
+def reset_settings():
+    """
+    Reset settings to test defaults before each test.
+    Automatically applied to all tests.
+    """
+    original_environment = settings.ENVIRONMENT
+    settings.ENVIRONMENT = "test"
+    
+    yield
+    
+    settings.ENVIRONMENT = original_environment
+
+
+@pytest.fixture
+def mock_ai_response() -> str:
+    """
+    Mock AI-generated content for testing without API calls.
+    """
+    return """
+# 4.1 Understanding the Organization and Its Context
+
+## Purpose
+This clause establishes the foundation for the Quality Management System by defining 
+the organizational context and external/internal factors that affect strategic direction.
+
+## Scope
+Test Industries Inc operates in the automotive components sector, manufacturing 
+precision parts for electric vehicle manufacturers.
+
+## Key Requirements
+1. Identify external and internal issues
+2. Monitor and review these issues regularly
+3. Consider issues when establishing QMS scope
+"""

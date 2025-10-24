@@ -138,7 +138,7 @@ class AuditLog(Base):
     
     # Changes tracked
     changes_made = Column(JSON, nullable=True)  # JSON object with change details
-    metadata = Column(JSON, nullable=True)  # Additional metadata
+    extra_metadata = Column(JSON, nullable=True)  # Additional metadata (renamed from metadata to avoid SQLAlchemy conflict)
     
     # IP and session tracking
     ip_address = Column(String, nullable=True)

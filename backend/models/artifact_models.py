@@ -8,7 +8,7 @@ from sqlalchemy import (
     Column, String, Integer, Float, Boolean, Date, DateTime,
     Text, ForeignKey, Enum as SQLEnum
 )
-from backend.database.base import Base
+from backend.models.iso_models import Base
 
 
 # ===== Enums =====
