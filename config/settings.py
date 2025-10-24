@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # Application
-    APP_NAME: str = "ISO 9001 AI Documentation Generator"
+    APP_NAME: str = "ISO Helper - Universal Multi-ISO Platform"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     
@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     
     # Document Storage
     DOCUMENTS_PATH: str = "./generated_documents"
-    TEMPLATES_PATH: str = "./templates/iso9001"
+    TEMPLATES_PATH: str = "./templates"
     
     # MarkItDown Configuration
     ENABLE_MARKITDOWN: bool = True

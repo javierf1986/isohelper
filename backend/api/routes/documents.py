@@ -26,7 +26,7 @@ class DocumentGenerationRequest(BaseModel):
     company_name: str = Field(description="Company name")
     industry: str = Field(description="Industry sector")
     company_size: str = Field(description="Company size: small, medium, large")
-    clauses: List[str] = Field(description="ISO 9001 clauses to include")
+    clauses: List[str] = Field(description="ISO clauses to include")
     language: str = Field(default="en", description="Document language")
     format: str = Field(default="markdown", description="Output format: markdown, pdf, docx")
     generate_full_manual: bool = Field(default=True, description="Generate combined manual vs individual files")
@@ -169,9 +169,9 @@ async def generate_document_wizard(
 @router.post("/generate/legacy", response_model=DocumentResponse)
 async def generate_document(request: DocumentGenerationRequest, background_tasks: BackgroundTasks):
     """
-    Generate a new ISO 9001 document based on company profile
+    Generate a new ISO document based on company profile
     
-    User Story: As a Quality Manager, I want to generate a complete ISO 9001 manual 
+    User Story: As a Quality Manager, I want to generate a complete ISO manual 
     automatically, so that I can have a baseline for certification.
     """
     import time
@@ -320,7 +320,7 @@ async def list_documents(skip: int = 0, limit: int = 10):
 
 class AIEnhancementRequest(BaseModel):
     """Request model for AI content enhancement"""
-    clause: str = Field(description="ISO 9001 clause number")
+    clause: str = Field(description="ISO clause number")
     company_name: str = Field(description="Company name")
     industry: str = Field(description="Industry sector")
     company_size: str = Field(description="Company size")
@@ -355,7 +355,7 @@ class AIEnhancementResponse(BaseModel):
 @router.post("/enhance", response_model=AIEnhancementResponse)
 async def enhance_content(request: AIEnhancementRequest):
     """
-    Enhance ISO 9001 clause content using AI
+    Enhance ISO clause content using AI
     
     User Story: As a Quality Manager, I want AI-generated industry-specific 
     examples and context, so that my documentation is more relevant and comprehensive.
@@ -453,7 +453,7 @@ async def generate_industry_examples(
     ai_provider: Optional[str] = None
 ):
     """
-    Generate industry-specific examples for an ISO 9001 clause
+    Generate industry-specific examples for an ISO clause
     
     User Story: As a Quality Manager, I want to see real-world examples 
     from my industry, so that I can better understand how to implement the requirements.

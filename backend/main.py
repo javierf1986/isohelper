@@ -1,5 +1,5 @@
 """
-ISO 9001 AI Documentation Generator - Main API Entry Point
+ISO Helper - Universal Multi-ISO Platform - Main API Entry Point
 """
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +19,7 @@ from config.settings import settings
 async def lifespan(app: FastAPI):
     """Lifecycle events for the application"""
     # Startup
-    print("🚀 Starting ISO 9001 AI Documentation Generator")
+    print("🚀 Starting ISO Helper - Universal Multi-ISO Platform")
     print(f"📝 Environment: {settings.ENVIRONMENT}")
     print("🗄️  Initializing database...")
     init_db()

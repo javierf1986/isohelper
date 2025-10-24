@@ -2,7 +2,7 @@
 AI Enhancement Service
 Option B: AI Integration with flexible LLM support (Mistral, OpenAI, etc.)
 
-This service provides context-aware content enhancement for ISO 9001 documents.
+This service provides context-aware content enhancement for ISO standards documents.
 Supports multiple AI providers with a unified interface.
 """
 from typing import Dict, List, Optional, Literal
@@ -106,7 +106,7 @@ class OpenAIProvider(AIProvider):
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are an ISO 9001 quality management expert."},
+                    {"role": "system", "content": "You are an ISO standards quality management expert."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=max_tokens,
@@ -215,7 +215,7 @@ class AIEnhancer:
         enhancement_level: Literal["light", "moderate", "comprehensive"] = "moderate"
     ) -> str:
         """
-        Enhance ISO 9001 clause content with AI-generated context
+        Enhance ISO clause content with AI-generated context
         
         Args:
             clause: ISO clause number (e.g., "4.1")
@@ -269,14 +269,14 @@ class AIEnhancer:
         Returns:
             Industry-specific examples and recommendations
         """
-        prompt = f"""Generate 3 practical, industry-specific examples for ISO 9001:2015 Clause {clause}.
+        prompt = f"""Generate 3 practical, industry-specific examples for ISO Clause {clause}.
 
 Industry: {industry}
 Company Size: {company_size}
 
 For each example, provide:
 1. A realistic scenario
-2. How it applies to ISO 9001 requirements
+2. How it applies to ISO requirements
 3. Practical implementation steps
 
 Format as markdown with clear headings."""
@@ -306,7 +306,7 @@ Format as markdown with clear headings."""
         Returns:
             Improvement suggestions
         """
-        prompt = f"""As an ISO 9001 quality management expert, analyze the following company profile and suggest process improvements:
+        prompt = f"""As an ISO quality management expert, analyze the following company profile and suggest process improvements:
 
 Company: {company_data.get('company_name')}
 Industry: {company_data.get('industry')}
@@ -315,7 +315,7 @@ Current Processes: {', '.join(current_processes)}
 
 Provide:
 1. 3-5 specific process improvement recommendations
-2. Alignment with ISO 9001:2015 requirements
+2. Alignment with ISO standard requirements
 3. Expected benefits and implementation timeline
 
 Format as markdown with clear sections."""
@@ -351,7 +351,7 @@ Format as markdown with clear sections."""
         else:  # comprehensive
             instruction = "Provide comprehensive details, examples, and best practices"
         
-        prompt = f"""You are an ISO 9001:2015 quality management expert. Enhance the following ISO {clause} documentation for {company_name}.
+        prompt = f"""You are an ISO quality management expert. Enhance the following ISO {clause} documentation for {company_name}.
 
 Industry: {industry}
 Company Size: {company_size}
@@ -363,7 +363,7 @@ Base Documentation:
 Task: {instruction} that are:
 1. Specific to the {industry} industry
 2. Appropriate for a {company_size} organization
-3. Aligned with ISO 9001:2015 requirements
+3. Aligned with ISO standard requirements
 4. Practical and implementable
 
 Provide ONLY the enhanced section content in markdown format. Do not include explanations or meta-commentary."""

@@ -50,7 +50,7 @@ export default function Home() {
             Universal Multi-ISO Platform
           </p>
           <p className="text-lg text-gray-600 mb-12 max-w-2xl mx-auto">
-            Generate professional ISO 9001 documentation with AI assistance.
+            Generate professional ISO documentation with AI assistance.
           </p>
 
           <div className="flex gap-4 justify-center">

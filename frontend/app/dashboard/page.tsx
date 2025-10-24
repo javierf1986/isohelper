@@ -114,7 +114,7 @@ function DashboardContent() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">{t('dashboard.generateDocument')}</p>
-                  <p className="text-sm text-gray-600">Create ISO 9001 documentation with AI</p>
+                  <p className="text-sm text-gray-600">Create ISO documentation with AI</p>
                 </div>
               </div>
             </button>
