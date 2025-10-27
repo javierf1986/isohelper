@@ -64,6 +64,12 @@ class ISOStandard(Base):
     scope = Column(Text)
     keywords = Column(JSON)  # List of search keywords
     
+    # QMS Scope fields (ISO 4.3)
+    qms_scope_statement = Column(Text)  # Detailed QMS scope
+    qms_exclusions = Column(Text)  # Permitted exclusions (e.g., ISO 9001 clause 7.3)
+    qms_applicability = Column(Text)  # Where and how the QMS applies
+    qms_boundaries = Column(Text)  # Geographic/organizational boundaries
+    
     # Structure info
     total_clauses = Column(Integer, default=0)
     has_annexes = Column(Boolean, default=False)

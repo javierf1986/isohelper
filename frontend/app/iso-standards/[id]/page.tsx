@@ -22,6 +22,10 @@ interface ISOStandardDetail {
   is_active: boolean;
   imported_at: string;
   clauses: Clause[];
+  qms_scope_statement?: string;
+  qms_exclusions?: string;
+  qms_applicability?: string;
+  qms_boundaries?: string;
 }
 
 export default function ISOStandardDetailPage() {
@@ -36,6 +40,13 @@ export default function ISOStandardDetailPage() {
   const [expandedClauses, setExpandedClauses] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showScopeEditor, setShowScopeEditor] = useState(false);
+  const [scopeData, setScopeData] = useState({
+    qms_scope_statement: '',
+    qms_exclusions: '',
+    qms_applicability: '',
+    qms_boundaries: ''
+  });
 
   useEffect(() => {
     if (standardId) {
@@ -50,6 +61,13 @@ export default function ISOStandardDetailPage() {
       if (response.ok) {
         const data = await response.json();
         setStandard(data);
+        // Initialize scope data
+        setScopeData({
+          qms_scope_statement: data.qms_scope_statement || '',
+          qms_exclusions: data.qms_exclusions || '',
+          qms_applicability: data.qms_applicability || '',
+          qms_boundaries: data.qms_boundaries || ''
+        });
       } else {
         setError('Failed to load ISO standard details');
       }
@@ -93,6 +111,27 @@ export default function ISOStandardDetailPage() {
       setDeleting(false);
     }
     setShowDeleteConfirm(false);
+  };
+
+  const handleScopeUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`http://localhost:8000/api/v1/iso-standards/${standardId}/scope`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scopeData)
+      });
+
+      if (response.ok) {
+        setShowScopeEditor(false);
+        fetchStandardDetail();
+      } else {
+        setError('Failed to update QMS scope');
+      }
+    } catch (err) {
+      setError('Error updating QMS scope');
+      console.error('Scope update error:', err);
+    }
   };
 
   const getCategoryBadge = (category?: string) => {
@@ -204,6 +243,59 @@ export default function ISOStandardDetailPage() {
           </div>
         </div>
 
+        {/* QMS Scope Section (ISO 4.3) */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">QMS Scope</h2>
+                <p className="text-sm text-gray-600 mt-1">ISO 4.3 - Scope of the Quality Management System</p>
+              </div>
+              <button
+                onClick={() => setShowScopeEditor(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+              >
+                {(standard.qms_scope_statement || standard.qms_exclusions || standard.qms_applicability || standard.qms_boundaries) 
+                  ? 'Edit Scope' 
+                  : 'Define Scope'}
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-4">
+            {standard.qms_scope_statement ? (
+              <>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 mb-1">Scope Statement</h3>
+                  <p className="text-gray-900 whitespace-pre-wrap">{standard.qms_scope_statement}</p>
+                </div>
+                {standard.qms_exclusions && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-1">Exclusions</h3>
+                    <p className="text-gray-900 whitespace-pre-wrap">{standard.qms_exclusions}</p>
+                  </div>
+                )}
+                {standard.qms_applicability && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-1">Applicability</h3>
+                    <p className="text-gray-900 whitespace-pre-wrap">{standard.qms_applicability}</p>
+                  </div>
+                )}
+                {standard.qms_boundaries && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-1">Boundaries</h3>
+                    <p className="text-gray-900 whitespace-pre-wrap">{standard.qms_boundaries}</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                No QMS scope defined yet. Click "Define Scope" to add scope information.
+              </p>
+            )}
+          </div>
+        </div>
+
         {/* Clauses List */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
@@ -307,6 +399,80 @@ export default function ISOStandardDetailPage() {
                   {deleting ? 'Deleting...' : 'Delete Permanently'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* QMS Scope Editor Modal */}
+        {showScopeEditor && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Edit QMS Scope</h3>
+              <form onSubmit={handleScopeUpdate} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Scope Statement *
+                  </label>
+                  <textarea
+                    value={scopeData.qms_scope_statement}
+                    onChange={(e) => setScopeData({...scopeData, qms_scope_statement: e.target.value})}
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Define the products, services, and processes covered by your QMS..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Exclusions
+                  </label>
+                  <textarea
+                    value={scopeData.qms_exclusions}
+                    onChange={(e) => setScopeData({...scopeData, qms_exclusions: e.target.value})}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="List any permitted exclusions (e.g., ISO 9001 clause 8.3 - Design and development)..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Applicability
+                  </label>
+                  <textarea
+                    value={scopeData.qms_applicability}
+                    onChange={(e) => setScopeData({...scopeData, qms_applicability: e.target.value})}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Where and how the QMS applies (locations, departments, processes)..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Boundaries
+                  </label>
+                  <textarea
+                    value={scopeData.qms_boundaries}
+                    onChange={(e) => setScopeData({...scopeData, qms_boundaries: e.target.value})}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    placeholder="Geographic, organizational, or operational boundaries..."
+                  />
+                </div>
+                <div className="flex gap-3 justify-end pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowScopeEditor(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                  >
+                    Save Scope
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

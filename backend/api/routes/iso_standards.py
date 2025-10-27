@@ -356,3 +356,46 @@ async def toggle_iso_standard_active(
         "message": f"ISO standard {standard.name} is now {'active' if new_status else 'inactive'}",
         "is_active": new_status
     }
+
+
+class QMSScopeUpdate(BaseModel):
+    """QMS Scope update model"""
+    qms_scope_statement: Optional[str] = None
+    qms_exclusions: Optional[str] = None
+    qms_applicability: Optional[str] = None
+    qms_boundaries: Optional[str] = None
+
+
+@router.patch("/{standard_id}/scope")
+async def update_qms_scope(
+    standard_id: str,
+    scope_data: QMSScopeUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Update QMS scope for an ISO standard (ISO 4.3)
+    """
+    standard = db.query(ISOStandard).filter(ISOStandard.id == standard_id).first()
+    
+    if not standard:
+        raise HTTPException(status_code=404, detail="ISO standard not found")
+    
+    # Update scope fields
+    update_dict = scope_data.dict(exclude_unset=True)
+    for field, value in update_dict.items():
+        setattr(standard, field, value)
+    
+    db.commit()
+    db.refresh(standard)
+    
+    return {
+        "success": True,
+        "message": "QMS scope updated successfully",
+        "scope": {
+            "qms_scope_statement": standard.qms_scope_statement,
+            "qms_exclusions": standard.qms_exclusions,
+            "qms_applicability": standard.qms_applicability,
+            "qms_boundaries": standard.qms_boundaries
+        }
+    }
+

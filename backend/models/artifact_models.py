@@ -55,6 +55,15 @@ class AuditStatus(str, enum.Enum):
     REPORT_ISSUED = "report_issued"
 
 
+class ObjectiveStatus(str, enum.Enum):
+    """Quality Objective Status"""
+    PLANNED = "planned"
+    IN_PROGRESS = "in_progress"
+    ACHIEVED = "achieved"
+    DELAYED = "delayed"
+    CANCELLED = "cancelled"
+
+
 # ===== Models =====
 
 class NonConformity(Base):
@@ -253,6 +262,12 @@ class TrainingRecord(Base):
     workspace_id = Column(String(36), ForeignKey("workspaces.id"), nullable=False, index=True)
     employee_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     
+    # Employee Information (for training matrix)
+    employee_name = Column(String(255))
+    employee_number = Column(String(100))
+    job_role = Column(String(255))  # For training matrix by role
+    department = Column(String(255))
+    
     # Training Information
     training_title = Column(String(500), nullable=False)
     training_type = Column(String(100))  # Internal, External, On-the-job, E-learning
@@ -263,13 +278,20 @@ class TrainingRecord(Base):
     training_date = Column(Date, nullable=False, index=True)
     duration_hours = Column(Float)
     
+    # Enhanced Expiry Tracking
+    expiry_date = Column(Date, index=True)  # When training/certification expires
+    reminder_sent = Column(Boolean, default=False)  # Track if expiry reminder sent
+    
     # Competency
     competency_area = Column(String(255))
     skills_covered = Column(Text)  # JSON array
+    competence_achieved = Column(Boolean, default=False)  # Was competence demonstrated?
+    evaluation_method = Column(String(255))  # How competence was evaluated
     
     # Assessment
     assessment_required = Column(Boolean, default=False)
     assessment_score = Column(Float)
+    evaluation_score = Column(Float)  # Overall evaluation score
     passing_score = Column(Float)
     passed = Column(Boolean)
     
@@ -345,6 +367,205 @@ class CustomerComplaint(Base):
     
     # Dates
     target_resolution_date = Column(Date)
+
+
+class QualityObjective(Base):
+    """Track quality objectives and their achievement (ISO 6.2)"""
+    __tablename__ = "quality_objectives"
+    
+    id = Column(String(36), primary_key=True)
+    workspace_id = Column(String(36), ForeignKey("workspaces.id"), nullable=False, index=True)
+    
+    # Basic Information
+    title = Column(String(500), nullable=False)
+    description = Column(Text)
+    objective_number = Column(String(50), unique=True, nullable=False, index=True)  # OBJ-2025-001
+    
+    # Measurement
+    target_value = Column(String(255))  # e.g., "95% on-time delivery", "< 2% defect rate"
+    current_value = Column(String(255))  # Current achievement
+    unit_of_measure = Column(String(100))  # %, count, hours, etc.
+    measurement_method = Column(Text)  # How to measure this objective
+    measurement_frequency = Column(String(100))  # monthly, quarterly, annually
+    
+    # Status & Progress
+    status = Column(SQLEnum(ObjectiveStatus), nullable=False, default=ObjectiveStatus.PLANNED, index=True)
+    progress_percentage = Column(Float, default=0.0)  # 0-100
+    
+    # Responsibility
+    responsible_person = Column(String(36), ForeignKey("users.id"), nullable=False)
+    department = Column(String(255))
+    
+    # Timeline
+    start_date = Column(Date)
+    target_date = Column(Date, nullable=False, index=True)
+    achieved_date = Column(Date)
+    
+    # ISO Context
+    iso_standard_id = Column(String(36), ForeignKey("iso_standards.id"))
+    related_clause = Column(String(20))  # e.g., "6.2.1", "9.1.1"
+    
+    # Linkages
+    linked_processes = Column(Text)  # JSON array of process IDs
+    linked_risks = Column(Text)  # JSON array of risk IDs
+    
+    # Evidence & Documentation
+    evidence = Column(Text)  # JSON array of document references
+    progress_notes = Column(Text)  # JSON array of progress updates with dates
+    
+    # Review
+    last_review_date = Column(Date)
+    next_review_date = Column(Date)
+    review_comments = Column(Text)
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_by = Column(String(36), ForeignKey("users.id"), nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+
+class RequirementsReview(Base):
+    """
+    Product/Service Requirements Review Records
+    ISO 8.2.3 - Review of requirements for products and services
+    """
+    __tablename__ = "requirements_reviews"
+    
+    id = Column(String(36), primary_key=True)
+    review_number = Column(String(50), unique=True, nullable=False, index=True)  # RR-2024-001
+    workspace_id = Column(String(36), ForeignKey("workspaces.id"), nullable=False, index=True)
+    
+    # Customer & Contract Information
+    customer_name = Column(String(255), nullable=False, index=True)
+    customer_contact = Column(String(255))
+    product_service_name = Column(String(500), nullable=False)
+    contract_number = Column(String(100), index=True)
+    order_number = Column(String(100))
+    
+    # Review Details
+    review_date = Column(Date, nullable=False, index=True)
+    reviewed_by = Column(String(36), ForeignKey("users.id"), nullable=False)
+    
+    # Requirements
+    customer_requirements = Column(Text, nullable=False)  # JSON or text description
+    regulatory_requirements = Column(Text)  # Applicable legal/regulatory requirements
+    statutory_requirements = Column(Text)  # Other statutory requirements
+    delivery_requirements = Column(Text)  # Schedule, delivery dates, logistics
+    
+    # Organization Capability
+    capability_to_meet = Column(Boolean, default=True)  # Can we meet requirements?
+    capability_assessment = Column(Text)  # Assessment notes
+    resource_availability = Column(Text)  # Resources needed and availability
+    
+    # Differences & Clarifications
+    differences_from_previous = Column(Text)  # Differences from previous contracts
+    unresolved_issues = Column(Text)  # Issues not resolved before contract acceptance
+    clarifications_needed = Column(Text)  # Customer clarifications requested
+    
+    # Review Result
+    review_result = Column(String(50), nullable=False)  # APPROVED, CONDITIONAL, REJECTED
+    approval_conditions = Column(Text)  # Conditions if conditional approval
+    rejection_reasons = Column(Text)  # Reasons if rejected
+    
+    # Participants
+    review_participants = Column(Text)  # JSON array of participant names/roles
+    customer_representative = Column(String(255))
+    
+    # Evidence & Documentation
+    supporting_documents = Column(Text)  # JSON array of document references
+    meeting_minutes = Column(Text)  # Meeting notes if review conducted in meeting
+    
+    # Follow-up
+    follow_up_actions = Column(Text)  # JSON array of actions required
+    contract_signed_date = Column(Date)
+    
+    # ISO Reference
+    iso_standard_id = Column(String(36), ForeignKey("iso_standards.id"))
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+
+class QualityPolicy(Base):
+    """
+    Quality Policy Management with Versioning
+    ISO 5.2 - Quality policy
+    """
+    __tablename__ = "quality_policies"
+    
+    id = Column(String(36), primary_key=True)
+    policy_number = Column(String(50), unique=True, nullable=False, index=True)  # QP-001-v2
+    workspace_id = Column(String(36), ForeignKey("workspaces.id"), nullable=False, index=True)
+    
+    # Version Control
+    version = Column(String(20), nullable=False, index=True)  # v1.0, v2.0
+    version_number = Column(Integer, nullable=False)  # Integer for sorting
+    previous_version_id = Column(String(36), ForeignKey("quality_policies.id"))  # Link to previous version
+    
+    # Policy Content
+    policy_title = Column(String(500), nullable=False)
+    policy_statement = Column(Text, nullable=False)  # The actual policy text
+    scope = Column(Text)  # Where this policy applies
+    purpose = Column(Text)  # Why this policy exists
+    
+    # Commitments
+    quality_commitments = Column(Text)  # JSON array of specific commitments
+    customer_focus_commitment = Column(Text)
+    improvement_commitment = Column(Text)
+    compliance_commitment = Column(Text)
+    
+    # Responsibilities
+    policy_owner = Column(String(36), ForeignKey("users.id"), nullable=False)
+    department = Column(String(255))
+    
+    # Dates
+    effective_date = Column(Date, nullable=False, index=True)
+    review_date = Column(Date)  # Next scheduled review
+    superseded_date = Column(Date)  # Date when replaced by new version
+    
+    # Approval
+    approved_by = Column(String(36), ForeignKey("users.id"))  # Top management
+    approval_date = Column(Date)
+    approval_signature_path = Column(String(1000))  # Path to signed document
+    
+    # Communication & Awareness
+    communication_plan = Column(Text)  # How policy will be communicated
+    communicated_to = Column(Text)  # JSON array of communication records
+    awareness_training_required = Column(Boolean, default=True)
+    awareness_evidence = Column(Text)  # JSON array of evidence (training records, etc.)
+    
+    # Availability
+    document_location = Column(String(1000))  # Where policy document is stored
+    publicly_available = Column(Boolean, default=False)
+    external_url = Column(String(500))  # URL if published externally
+    
+    # Change Management
+    change_reason = Column(Text)  # Why this version was created
+    changes_summary = Column(Text)  # Summary of changes from previous version
+    impact_assessment = Column(Text)  # Assessment of impact of changes
+    
+    # Review History
+    last_review_date = Column(Date)
+    review_frequency_months = Column(Integer, default=12)  # How often to review
+    review_notes = Column(Text)
+    
+    # Status
+    status = Column(String(50), nullable=False, default="DRAFT")  # DRAFT, APPROVED, ACTIVE, SUPERSEDED, ARCHIVED
+    
+    # ISO Reference
+    iso_standard_id = Column(String(36), ForeignKey("iso_standards.id"))
+    
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_by = Column(String(36), ForeignKey("users.id"), nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+
+
     actual_resolution_date = Column(Date)
     
     # Status
